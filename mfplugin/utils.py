@@ -2,6 +2,7 @@ import re
 import os
 
 MFMODULE = os.environ.get('MFMODULE', 'MFEXT')
+MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
 MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'mfext')
 PLUGIN_NAME_REGEXP = "^[A-Za-z0-9_-]+$"
 
@@ -83,10 +84,28 @@ def inside_a_plugin_env():
 
 
 def get_plugin_env_prefix(plugin_name):
+    """Return the env var prefix for the given plugin name.
+
+    Args:
+        plugin_name (string): the plugin name.
+
+    Returns:
+        The env var prefix for the plugin (string).
+    """
     return "%s_PLUGIN_%s" % (MFMODULE, plugin_name.upper())
 
 
 def get_plugin_env(plugin_name, section, key):
+    """Return the env var name given a plugin_name and a configuration key.
+
+    Args:
+        plugin_name (string): the plugin name.
+        section (string): the name of the configuration section.
+        key (string): the name of the configuration key.
+
+    Returns:
+        The corresponding env var name.
+    """
     return "%s_%s_%s" % (get_plugin_env_prefix(plugin_name),
                          section.upper(), key.upper())
 
@@ -111,3 +130,55 @@ def cerberus_errors_to_human_string(v_errors):
                 for error2 in error[key]:
                     errors = errors + \
                         "[section: %s][key: %s] %s\n" % (section, key, error2)
+
+
+class MFPluginException(Exception):
+    """Base mfplugin Exception class."""
+
+    pass
+
+
+class BadPlugin(MFPluginException):
+    """Exception raised when a plugin is badly constructed."""
+
+    pass
+
+
+class BadPluginConfiguration(MFPluginException):
+    """Exception raised when a plugin has a bad configuration."""
+
+    pass
+
+
+class NotInstalledPlugin(MFPluginException):
+    """Exception raised when a plugin is not installed."""
+
+    pass
+
+
+def get_rpm_cmd(plugins_base_dir, command, extra_args="", add_prefix=False):
+    base = os.path.join(plugins_base_dir, "base")
+    if add_prefix:
+        cmd = 'layer_wrapper --layers=rpm@mfext -- rpm %s ' \
+            '--dbpath %s --prefix %s %s' % \
+            (command, base, plugins_base_dir, extra_args)
+    else:
+        cmd = 'layer_wrapper --layers=rpm@mfext -- rpm %s ' \
+            '--dbpath %s %s' % \
+            (command, base, extra_args)
+    return cmd
+
+
+def get_default_plugins_base_dir():
+    """Return the default plugins base directory path.
+
+    This value correspond to the content of MFMODULE_PLUGINS_BASE_DIR env var
+    or ${RUNTIME_HOME}/var/plugins (if not set).
+
+    Returns:
+        (string): the default plugins base directory path.
+
+    """
+    if "MFMODULE_PLUGINS_BASE_DIR" in os.environ:
+        return os.environ.get("MFMODULE_PLUGINS_BASE_DIR")
+    return os.path.join(MFMODULE_RUNTIME_HOME, "var", "plugins")

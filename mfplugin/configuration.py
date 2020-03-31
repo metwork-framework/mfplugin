@@ -5,7 +5,7 @@ from cerberus import Validator
 from mflog import get_logger
 from mfplugin.utils import validate_configparser, \
     cerberus_errors_to_human_string
-from mfplugin.plugin_command import COMMAND_SCHEMA, MFPluginCommand
+from mfplugin.command import COMMAND_SCHEMA, Command
 
 SCHEMA = {
     "general": {
@@ -37,28 +37,30 @@ SCHEMA = {
     },
     "custom": {"type": "dict", "allow_unknown": True, "schema": {}},
 }
-LOGGER = get_logger("plugin_configuration.py")
+LOGGER = get_logger("configuration.py")
 
 
-class MFPluginConfiguration(object):
+class Configuration(object):
 
     __loaded = None
     _plugin_name = None
     _plugin_home = None
     _parser = None
+    _version = None
     _commands = None
     _config_filepath = None
-    plugin_command_class = None
+    command_class = None
 
     def __init__(self, plugin_name, plugin_home, config_filepath=None,
-                 plugin_command_class=MFPluginCommand):
+                 command_class=Command):
         self._plugin_name = plugin_name
         self._plugin_home = plugin_home
+        self.command_class = command_class
         if config_filepath is None:
             self._config_filepath = os.path.join(plugin_home, "config.ini")
         else:
             self._config_filepath = config_filepath
-        self._MFPluginConfiguration__loaded = False
+        self.__loaded = False
 
     def get_schema(self):
         return SCHEMA
@@ -74,10 +76,10 @@ class MFPluginConfiguration(object):
                     schema[section] = orig.copy()
         return schema
 
-    def __load(self):
-        if self._MFPluginConfiguration__loaded:
+    def load(self):
+        if self.__loaded:
             return
-        self._MFPluginConfiguration__loaded = True
+        self.__loaded = True
         self._parser = OpinionatedConfigParser()
         self._parser.read(self._config_filepath)
         v = Validator()
@@ -91,21 +93,21 @@ class MFPluginConfiguration(object):
                 % (self._plugin_name, self._plugin_home, errors)
             )
             return
+        self._version = self._parser.get("general", "_version")
         self._commands = []
         for prefix in ("app_", "extra_daemon_"):
             for section in [x for x in self._parser.sections()
                             if x.startswith(prefix)]:
-                command = (self.plugin_command_class)(
-                    self._plugin_name, self._parser, section
-                )
+                c = self.command_class
+                command = c(self._plugin_name, self._parser, section)
                 self._commands.append(command)
 
     @property
     def commands(self):
-        self.__load()
+        self.load()
         return self._commands
 
-
-p = MFPluginConfiguration("foo", "/home/foo", "toto.ini")
-p.commands
-# okay decompiling toto.pyc
+    @property
+    def version(self):
+        self.load()
+        return self._version

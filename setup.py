@@ -13,5 +13,15 @@ setup(
     packages=find_packages(),
     install_requires=install_requires,
     entry_points={
+        "console_scripts": [
+            "plugins.list = mfplugin.cli_tools.plugins_list:main",
+            "plugins.info = mfutil.cli_tools.plugins_info:main",
+            "plugins.hash = mfutil.cli_tools.plugins_hash:main",
+            "_plugins.init = mfutil.cli_tools.plugins_init:main",
+            "_plugins.make = mfutil.cli_tools.plugins_make:main",
+            "_plugins.develop = mfutil.cli_tools.plugins_develop:main",
+            "plugins.install = mfutil.cli_tools.plugins_install:main",
+            "plugins.uninstall = mfutil.cli_tools.plugins_uninstall:main"
+        ]
     }
 )
