@@ -1,0 +1,3 @@
+class MFPlugin(object):
+
+    pass
