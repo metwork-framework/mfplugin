@@ -13,19 +13,18 @@ def validate_plugin_name(plugin_name):
     Args:
         plugin_name (string): the plugin name to validate.
 
-    Returns:
-        (boolean, message): (True, None) if the plugin name is ok,
-            (False, "error message") if the plugin name is not ok.
+    Raises:
+        BadPluginName exception if the plugin_name is incorrect.
     """
     if plugin_name.startswith("plugin_"):
-        return (False, "A plugin name can't start with 'plugin_'")
+        raise BadPluginName("A plugin name can't start with 'plugin_'")
     if plugin_name.startswith("__"):
-        return (False, "A plugin name can't start with '__'")
+        raise BadPluginName("A plugin name can't start with '__'")
     if plugin_name == "base":
-        return (False, "A plugin name can't be 'base'")
+        raise BadPluginName("A plugin name can't be 'base'")
     if not re.match(PLUGIN_NAME_REGEXP, plugin_name):
-        return (False, "A plugin name must follow %s" % PLUGIN_NAME_REGEXP)
-    return (True, None)
+        raise BadPluginName("A plugin name must follow %s" %
+                            PLUGIN_NAME_REGEXP)
 
 
 def plugin_name_to_layerapi2_label(plugin_name):
@@ -144,8 +143,14 @@ class BadPlugin(MFPluginException):
     pass
 
 
-class BadPluginConfiguration(MFPluginException):
+class BadPluginConfiguration(BadPlugin):
     """Exception raised when a plugin has a bad configuration."""
+
+    pass
+
+
+class BadPluginName(BadPlugin):
+    """Exception raised when a plugin has an invalid name."""
 
     pass
 

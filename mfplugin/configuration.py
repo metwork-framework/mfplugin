@@ -49,6 +49,11 @@ class Configuration(object):
     _version = None
     _commands = None
     _config_filepath = None
+    _summary = None
+    _license = None
+    _packager = None
+    _vendor = None
+    _url = None
     command_class = None
 
     def __init__(self, plugin_name, plugin_home, config_filepath=None,
@@ -94,6 +99,11 @@ class Configuration(object):
             )
             return
         self._version = self._parser.get("general", "_version")
+        self._summary = self._parser.get("general", "_summary")
+        self._license = self._parser.get("general", "_license")
+        self._packager = self._parser.get("general", "_packager")
+        self._vendor = self._parser.get("general", "_vendor")
+        self._url = self._parser.get("general", "_url")
         self._commands = []
         for prefix in ("app_", "extra_daemon_"):
             for section in [x for x in self._parser.sections()
@@ -111,3 +121,28 @@ class Configuration(object):
     def version(self):
         self.load()
         return self._version
+
+    @property
+    def summary(self):
+        self.load()
+        return self._summary
+
+    @property
+    def license(self):
+        self.load()
+        return self._license
+
+    @property
+    def packager(self):
+        self.load()
+        return self._packager
+
+    @property
+    def vendor(self):
+        self.load()
+        return self._vendor
+
+    @property
+    def url(self):
+        self.load()
+        return self._url

@@ -1,12 +1,13 @@
 import os
 import shutil
 import glob
+from gitignore_parser import parse_gitignore
 from mfutil import mkdir_p_or_die, BashWrapperOrRaise
 from mfplugin.plugin import Plugin
 from mfplugin.configuration import Configuration
 from mfplugin.command import Command
 from mfplugin.utils import get_default_plugins_base_dir, \
-    validate_plugin_name, get_rpm_cmd
+    validate_plugin_name, get_rpm_cmd, BadPluginName
 
 
 class PluginsManager(object):
@@ -54,14 +55,29 @@ class PluginsManager(object):
         if self.__loaded:
             return
         self.__loaded = True
-        self._plugins = []
+        self._plugins = {}
         for directory in glob.glob(os.path.join(self.plugins_base_dir, "*")):
             dname = os.path.basename(directory)
-            valid, _ = validate_plugin_name(dname)
-            if not valid:
+            try:
+                validate_plugin_name(dname)
+            except BadPluginName:
                 continue
             plugin = self.make_plugin_from_directory(directory)
-            self._plugins.append(plugin)
+            self._plugins[plugin.name] = plugin
+
+    def build_plugin(self, plugin_home):
+        plugin_home = os.path.abspath(plugin_home)
+        plugin = PluginsManager.make_plugin_from_directory(plugin_home)
+        plugin.load()
+        base = os.path.join(plugins_base_dir, "base")
+        pwd = os.getcwd()
+        tmpdir = os.path.join(RUNTIME_HOME, "tmp",
+                              "plugin_%s" % get_unique_hexa_identifier())
+        mkdir_p_or_die(os.path.join(tmpdir, "BUILD"))
+        mkdir_p_or_die(os.path.join(tmpdir, "RPMS"))
+        mkdir_p_or_die(os.path.join(tmpdir, "SRPMS"))
+
+
 
     @property
     def plugins(self):

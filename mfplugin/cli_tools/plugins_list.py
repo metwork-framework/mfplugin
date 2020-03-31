@@ -34,7 +34,7 @@ def main():
         print("hint: you can use %s.start to do that" % MFMODULE_LOWERCASE)
         print()
         sys.exit(3)
-    plugins = manager.plugins
+    plugins = manager.plugins.values()
     json_output = []
     table_data = []
     table_data.append(["Name", "Version", "Release", "Home"])
