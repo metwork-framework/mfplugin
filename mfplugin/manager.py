@@ -1,13 +1,23 @@
 import os
 import shutil
 import glob
-from gitignore_parser import parse_gitignore
-from mfutil import mkdir_p_or_die, BashWrapperOrRaise
+from mfutil import mkdir_p_or_die, BashWrapperOrRaise, \
+    get_unique_hexa_identifier
 from mfplugin.plugin import Plugin
 from mfplugin.configuration import Configuration
 from mfplugin.command import Command
+from mfplugin.file import PluginFile
 from mfplugin.utils import get_default_plugins_base_dir, \
-    validate_plugin_name, get_rpm_cmd, BadPluginName
+    get_rpm_cmd, BadPlugin
+
+
+def with_base_initialized(f):
+    def wrapper(self, *args, **kwargs):
+        if not self.initialized:
+            # FIXME: better exception class
+            raise Exception("plugins base not initialized")
+        f(self, *args, **kwargs)
+    return wrapper
 
 
 class PluginsManager(object):
@@ -36,12 +46,6 @@ class PluginsManager(object):
             self.initialized = False
         self.__loaded = False
 
-    def make_plugin_from_directory(self, plugin_home):
-        return Plugin.make_from_directory(
-            self.plugins_base_dir, plugin_home,
-            configuration_class=self.configuration_class,
-            command_class=self.command_class)
-
     def initialize_plugins_base(self):
         shutil.rmtree(self.plugins_base_dir, ignore_errors=True)
         mkdir_p_or_die(self.plugins_base_dir)
@@ -51,6 +55,20 @@ class PluginsManager(object):
                            self.plugins_base_dir)
         self.initialized = True
 
+    @with_base_initialized
+    def make_plugin(self, plugin_home):
+        pc = self.plugin_class
+        return pc(plugin_home, plugins_base_dir=self.plugins_base_dir,
+                  configuration_class=self.configuration_class,
+                  command_class=self.command_class)
+
+    @with_base_initialized
+    def install_plugin(self, plugin_filepath, ignore_errors=False,
+                       quiet=False):
+        x = PluginFile(plugin_filepath)
+        x.load()
+        # FIXME
+
     def load(self):
         if self.__loaded:
             return
@@ -58,26 +76,15 @@ class PluginsManager(object):
         self._plugins = {}
         for directory in glob.glob(os.path.join(self.plugins_base_dir, "*")):
             dname = os.path.basename(directory)
-            try:
-                validate_plugin_name(dname)
-            except BadPluginName:
+            if dname == "base":
+                # special directory (not a plugin one)
                 continue
-            plugin = self.make_plugin_from_directory(directory)
+            try:
+                plugin = self.make_plugin(directory)
+            except BadPlugin as e:
+                # FIXME: log warning
+                continue
             self._plugins[plugin.name] = plugin
-
-    def build_plugin(self, plugin_home):
-        plugin_home = os.path.abspath(plugin_home)
-        plugin = PluginsManager.make_plugin_from_directory(plugin_home)
-        plugin.load()
-        base = os.path.join(plugins_base_dir, "base")
-        pwd = os.getcwd()
-        tmpdir = os.path.join(RUNTIME_HOME, "tmp",
-                              "plugin_%s" % get_unique_hexa_identifier())
-        mkdir_p_or_die(os.path.join(tmpdir, "BUILD"))
-        mkdir_p_or_die(os.path.join(tmpdir, "RPMS"))
-        mkdir_p_or_die(os.path.join(tmpdir, "SRPMS"))
-
-
 
     @property
     def plugins(self):

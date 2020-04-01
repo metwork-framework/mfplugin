@@ -2,16 +2,21 @@ import os
 import hashlib
 import envtpl
 import shutil
+import glob
 from gitignore_parser import parse_gitignore
 from mflog import get_logger
-from mfutil import BashWrapper, get_unique_hexa_identifier, mkdir_p_or_die
+from mfutil import BashWrapper, get_unique_hexa_identifier, mkdir_p_or_die, \
+    BashWrapperOrRaise
 from mfplugin.configuration import Configuration
 from mfplugin.command import Command
 from mfplugin.utils import BadPlugin, get_default_plugins_base_dir, \
-    get_rpm_cmd, layerapi2_label_file_to_plugin_name
+    get_rpm_cmd, layerapi2_label_file_to_plugin_name, validate_plugin_name, \
+    CantBuildPlugin
 
 LOGGER = get_logger("mfplugin.py")
-MFMODULE_RUNTIME_HOME = os.environ['MFMODULE_RUNTIME_HOME']
+MFEXT_HOME = os.environ.get("MFEXT_HOME", None)
+MFMODULE_RUNTIME_HOME = os.environ.get('MFMODULE_RUNTIME_HOME', '/tmp')
+MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')
 SPEC_TEMPLATE = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              "plugin.spec")
 
@@ -38,34 +43,32 @@ class Plugin(object):
     is_dev_linked = None
     _is_installed = None
 
-    def __init__(self, plugins_base_dir, name, home,
+    def __init__(self, plugins_base_dir, home,
                  configuration_class=Configuration,
                  command_class=Command):
         self.configuration_class = configuration_class
         self.command_class = command_class
-        self.name = name
         self.home = os.path.abspath(home)
         if plugins_base_dir is not None:
             self.plugins_base_dir = plugins_base_dir
         else:
             self.plugins_base_dir = get_default_plugins_base_dir()
+        self.name = self._get_name()
         self.is_dev_linked = os.path.islink(os.path.join(self.plugins_base_dir,
                                                          self.name))
         self.__loaded = False
+        # FIXME: detect broken symlink
 
-    @classmethod
-    def make_from_directory(cls, plugins_base_dir, home,
-                            configuration_class=Configuration,
-                            command_class=Command):
-        llfpath = os.path.join(home, ".layerapi2_label")
-        name = layerapi2_label_file_to_plugin_name(llfpath)
-        return cls(plugins_base_dir, name, home,
-                   configuration_class=configuration_class,
-                   command_class=command_class)
+    def _get_name(self):
+        llfpath = os.path.join(self.home, ".layerapi2_label")
+        tmp = layerapi2_label_file_to_plugin_name(llfpath)
+        validate_plugin_name(tmp)
+        return tmp
 
     def load(self):
         if self.__loaded is True:
             return
+        self.__loaded = True
         c = self.configuration_class
         self._configuration = c(self.name, self.home,
                                 command_class=self.command_class)
@@ -73,8 +76,10 @@ class Plugin(object):
         self._load_rpm_infos()
         self._load_version_release()
         self._load_release_ignored_files()
-        self._is_installed = True
-        self.__loaded = True
+
+    def load_full(self):
+        self.load()
+        self.configuration.load()
 
     def _load_version_release(self):
         if not self._is_installed:
@@ -182,11 +187,9 @@ class Plugin(object):
                           packager, vendor, url, excludes):
         with open(SPEC_TEMPLATE, "r") as f:
             template = f.read()
-        for line in excludes:
-            template = template + '\n%exclude /metwork_plugin/%{name}/' + line
         extra_vars = {"NAME": name, "VERSION": version, "SUMMARY": summary,
                       "LICENSE": license, "PACKAGER": packager,
-                      "VENDOR": vendor, "URL": url}
+                      "VENDOR": vendor, "URL": url, "EXCLUDES": excludes}
         res = envtpl.render_string(template, extra_variables=extra_vars,
                                    keep_multi_blank_lines=False)
         with open(dest_file, "w") as f:
@@ -208,29 +211,30 @@ class Plugin(object):
             config.summary, config.license, config.packager,
             config.vendor, config.url, self.release_ignored_files
         )
-        cmd = "source %s/lib/bash_utils.sh ; " % MFEXT_HOME
-        cmd = cmd + "layer_load rpm@mfext ; "
+        cmd = ""
+        if MFEXT_HOME is not None:
+            cmd = cmd + "source %s/lib/bash_utils.sh ; " % MFEXT_HOME
+            cmd = cmd + "layer_load rpm@mfext ; "
         cmd = cmd + 'rpmbuild --define "_topdir %s" --define "pwd %s" ' \
             '--define "prefix %s" --dbpath %s ' \
-            '-bb %s/specfile.spec' % (tmpdir, plugin_path, tmpdir,
-                                    base, tmpdir)
-        x = BashWrapperOrRaise(cmd, MFUtilPluginCantBuild,
-                            "can't build plugin %s" % plugin_path)
+            '-bb %s/specfile.spec' % (tmpdir, self.home, tmpdir,
+                                      base, tmpdir)
+        x = BashWrapperOrRaise(cmd, CantBuildPlugin,
+                               "can't build plugin %s" % self.home)
         tmp = glob.glob(os.path.join(tmpdir, "RPMS", "x86_64", "*.rpm"))
         if len(tmp) == 0:
-            raise MFUtilPluginCantBuild("can't find generated plugin" %
-                                        plugin_path, bash_wrapper=x)
+            raise CantBuildPlugin("can't find generated plugin" %
+                                  self.home, bash_wrapper=x)
         plugin_path = tmp[0]
         new_basename = \
             os.path.basename(plugin_path).replace("x86_64.rpm",
-                                                "metwork.%s.plugin" %
-                                                MFMODULE_LOWERCASE)
+                                                  "metwork.%s.plugin" %
+                                                  MFMODULE_LOWERCASE)
         new_plugin_path = os.path.join(pwd, new_basename)
         shutil.move(plugin_path, new_plugin_path)
         shutil.rmtree(tmpdir, True)
         os.chdir(pwd)
         return new_plugin_path
-
 
     @property
     def configuration(self):

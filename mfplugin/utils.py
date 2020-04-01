@@ -1,9 +1,10 @@
 import re
 import os
+from mfutil import BashWrapperException
 
-MFMODULE = os.environ.get('MFMODULE', 'MFEXT')
+MFMODULE = os.environ.get('MFMODULE', 'GENERIC')
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
-MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'mfext')
+MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')
 PLUGIN_NAME_REGEXP = "^[A-Za-z0-9_-]+$"
 
 
@@ -50,7 +51,7 @@ def layerapi2_label_to_plugin_name(label):
     """
     if (not label.startswith("plugin_")) or \
             (not label.endswith("@%s" % MFMODULE_LOWERCASE)):
-        raise Exception("bad layerapi2_label: %s => is it really a plugin ?" %
+        raise BadPlugin("bad layerapi2_label: %s => is it really a plugin ?" %
                         label)
     return label[7:].split('@')[0]
 
@@ -69,7 +70,7 @@ def layerapi2_label_file_to_plugin_name(llf_path):
         with open(llf_path, 'r') as f:
             c = f.read().strip()
     except Exception:
-        raise Exception("can't read %s file" % llf_path)
+        raise BadPlugin("can't read %s file" % llf_path)
     return layerapi2_label_to_plugin_name(c)
 
 
@@ -115,6 +116,9 @@ def validate_configparser(v, cpobj, schema):
         document[section] = {}
         for key in cpobj.options(section):
             document[section][key] = cpobj.get(section, key)
+    import json
+    print(json.dumps(document, indent=4))
+    print(json.dumps(schema, indent=4))
     return v.validate(document, schema)
 
 
@@ -129,9 +133,10 @@ def cerberus_errors_to_human_string(v_errors):
                 for error2 in error[key]:
                     errors = errors + \
                         "[section: %s][key: %s] %s\n" % (section, key, error2)
+    return errors
 
 
-class MFPluginException(Exception):
+class MFPluginException(BashWrapperException):
     """Base mfplugin Exception class."""
 
     pass
@@ -157,6 +162,12 @@ class BadPluginName(BadPlugin):
 
 class NotInstalledPlugin(MFPluginException):
     """Exception raised when a plugin is not installed."""
+
+    pass
+
+
+class CantBuildPlugin(MFPluginException):
+    """Exception raised when we can't build a plugin."""
 
     pass
 

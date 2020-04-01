@@ -1,7 +1,7 @@
 import os
 from mfplugin.utils import get_plugin_env, BadPluginConfiguration
 
-MFMODULE = os.environ["MFMODULE"]
+MFMODULE = os.environ.get("MFMODULE", "GENERIC")
 COMMAND_SCHEMA = {
     "log_split_stdout_stderr": {"required": False, "type": "string",
                                 "allowed": ["1", "0", "AUTO"]},

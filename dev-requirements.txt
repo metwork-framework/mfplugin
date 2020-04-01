@@ -3,3 +3,4 @@ flake8
 mock
 pdoc3
 pytest
+pytest-cov

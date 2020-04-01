@@ -9,7 +9,7 @@ from terminaltables import SingleTable
 from mfutil.cli import echo_bold
 
 DESCRIPTION = "get the installed plugins list"
-MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'mfext')
+MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')
 
 
 def main():

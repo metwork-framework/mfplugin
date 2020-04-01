@@ -6,13 +6,15 @@ from mflog import get_logger
 from mfplugin.utils import validate_configparser, \
     cerberus_errors_to_human_string
 from mfplugin.command import COMMAND_SCHEMA, Command
+from mfplugin.utils import BadPlugin
 
 SCHEMA = {
     "general": {
+        "required": True,
         "type": "dict",
         "schema": {
             "_version": {"required": True, "type": "string",
-                         "regex": "^[a-z0-9-_.]+$"},
+                         "regex": r"^[a-z0-9-_]+\.[a-z0-9-_]+\.[a-z0-9-_]+$"},
             "_summary": {"required": True, "type": "string", "minlength": 1},
             "_license": {"required": True, "type": "string", "minlength": 1},
             "_url": {"required": True, "type": "string", "minlength": 1},
@@ -22,6 +24,7 @@ SCHEMA = {
         },
     },
     "app_*": {
+        "required": False,
         "type": "dict",
         "allow_unknown": True,
         "schema": {
@@ -29,13 +32,19 @@ SCHEMA = {
         },
     },
     "extra_daemon_*": {
+        "required": False,
         "type": "dict",
         "allow_unknown": True,
         "schema": {
             **COMMAND_SCHEMA
         },
     },
-    "custom": {"type": "dict", "allow_unknown": True, "schema": {}},
+    "custom": {
+        "required": False,
+        "type": "dict",
+        "allow_unknown": True,
+        "schema": {}
+    },
 }
 LOGGER = get_logger("configuration.py")
 
@@ -65,6 +74,9 @@ class Configuration(object):
             self._config_filepath = os.path.join(plugin_home, "config.ini")
         else:
             self._config_filepath = config_filepath
+        if not os.path.isfile(self._config_filepath):
+            raise BadPlugin("configuration file: %s is missing" %
+                            self._config_filepath)
         self.__loaded = False
 
     def get_schema(self):
@@ -89,6 +101,7 @@ class Configuration(object):
         self._parser.read(self._config_filepath)
         v = Validator()
         v.allow_unknown = True
+        v.require_all = True
         status = validate_configparser(v, self._parser, self.__get_schema())
         if status is False:
             errors = cerberus_errors_to_human_string(v.errors)
@@ -97,11 +110,13 @@ class Configuration(object):
                 "please fix %s/config.ini\n\n%s"
                 % (self._plugin_name, self._plugin_home, errors)
             )
-            return
+            raise BadPlugin("invalid configuration file: %s" %
+                            self._config_filepath)
         self._version = self._parser.get("general", "_version")
         self._summary = self._parser.get("general", "_summary")
         self._license = self._parser.get("general", "_license")
-        self._packager = self._parser.get("general", "_packager")
+        self._maintainer = self._parser.get("general", "_maintainer")
+        self._packager = self._maintainer
         self._vendor = self._parser.get("general", "_vendor")
         self._url = self._parser.get("general", "_url")
         self._commands = []
@@ -111,6 +126,10 @@ class Configuration(object):
                 c = self.command_class
                 command = c(self._plugin_name, self._parser, section)
                 self._commands.append(command)
+
+    def load_full(self):
+        self.load()
+        [x.load() for x in self.commands]
 
     @property
     def commands(self):
@@ -131,6 +150,11 @@ class Configuration(object):
     def license(self):
         self.load()
         return self._license
+
+    @property
+    def maintainer(self):
+        self.load()
+        return self._maintainer
 
     @property
     def packager(self):
