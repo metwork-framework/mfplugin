@@ -1,6 +1,6 @@
 import re
 import os
-from mfutil import BashWrapperException, BashWrapper
+from mfutil import BashWrapperException, BashWrapper, get_ipv4_for_hostname
 
 MFMODULE = os.environ.get('MFMODULE', 'GENERIC')
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
@@ -23,6 +23,8 @@ def validate_plugin_name(plugin_name):
         raise BadPluginName("A plugin name can't start with '__'")
     if plugin_name == "base":
         raise BadPluginName("A plugin name can't be 'base'")
+    if plugin_name == "config":
+        raise BadPluginName("A plugin name can't be 'config'")
     if not re.match(PLUGIN_NAME_REGEXP, plugin_name):
         raise BadPluginName("A plugin name must follow %s" %
                             PLUGIN_NAME_REGEXP)
@@ -232,3 +234,10 @@ def get_default_plugins_base_dir():
 
 def _touch_conf_monitor_control_file():
     BashWrapper("touch %s/var/conf_monitor" % MFMODULE_RUNTIME_HOME)
+
+
+def resolve(val):
+    if val.lower() == "null" or val.startswith("/"):
+        # If it's "null" or linux socket
+        return val
+    return get_ipv4_for_hostname(val)

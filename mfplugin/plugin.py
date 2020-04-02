@@ -7,16 +7,18 @@ from gitignore_parser import parse_gitignore
 from mflog import get_logger
 from mfutil import BashWrapper, get_unique_hexa_identifier, mkdir_p_or_die, \
     BashWrapperOrRaise
+from mfutil.layerapi2 import LayerApi2Wrapper
 from mfplugin.configuration import Configuration
 from mfplugin.command import Command
 from mfplugin.utils import BadPlugin, get_default_plugins_base_dir, \
     get_rpm_cmd, layerapi2_label_file_to_plugin_name, validate_plugin_name, \
-    CantBuildPlugin
+    CantBuildPlugin, plugin_name_to_layerapi2_label
 
 LOGGER = get_logger("mfplugin.py")
 MFEXT_HOME = os.environ.get("MFEXT_HOME", None)
 MFMODULE_RUNTIME_HOME = os.environ.get('MFMODULE_RUNTIME_HOME', '/tmp')
 MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')
+MFMODULE = os.environ.get('MFMODULE', 'GENERIC')
 SPEC_TEMPLATE = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              "plugin.spec")
 
@@ -81,6 +83,42 @@ class Plugin(object):
         self.load()
         self.configuration.load()
 
+    def get_plugin_env_dict(self, add_current_envs=True):
+        lines = []
+        res = {}
+        try:
+            # FIXME: shoud be better to parse this file in layerapi2
+            with open("%s/.layerapi2_dependencies" % self.home, "r") as f:
+                lines = f.readlines()
+        except Exception:
+            pass
+        for line in lines:
+            tmp = line.strip()
+            if tmp.startswith('-'):
+                tmp = tmp[1:]
+            if tmp.startswith("plugin_"):
+                home = LayerApi2Wrapper.get_layer_home(tmp)
+                try:
+                    p = Plugin(self.plugins_base_dir, home)
+                    p.load()
+                except Exception:
+                    continue
+                res.update(p.get_plugin_env_dict(add_current_envs=False))
+        env_var_dict = self.configuration.get_configuration_env_dict(
+            ignore_keys_starting_with="_", add_resolved=True)
+        res.update(env_var_dict)
+        if add_current_envs:
+            res["%s_CURRENT_PLUGIN_NAME" % MFMODULE] = self.name
+            res["%s_CURRENT_PLUGIN_DIR" % MFMODULE] = self.home
+            res["%s_CURRENT_PLUGIN_LABEL" % MFMODULE] = \
+                plugin_name_to_layerapi2_label(self.name)
+        return res
+
+    def set_plugin_env(self):
+        env_var_dict = self.get_plugin_env_dict()
+        for k, v in env_var_dict.items():
+            os.environ[k] = v
+
     def _load_version_release(self):
         if not self._is_installed:
             # the plugin is not installed, let's read version in configuration
@@ -125,7 +163,7 @@ class Plugin(object):
                 res.append(int(t))
             except Exception:
                 res.append(9999)
-        return res[0:3]
+        self._format_version = res[0:3]
 
     def _load_release_ignored_files(self):
         self._release_ignored_files = []

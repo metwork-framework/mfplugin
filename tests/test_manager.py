@@ -47,6 +47,12 @@ def test_install_plugin():
     x.initialize_plugins_base()
     _install_two_plugin(x)
     x.plugins["plugin1"].load_full()
+    assert int(x.plugins["plugin1"].size) > 0
+    assert len(x.plugins["plugin1"].build_date) > 8
+    assert len(x.plugins["plugin1"].build_host) > 0
+    assert x.plugins["plugin1"].format_version == [1, 0, 0]
+    assert len(x.plugins["plugin1"].get_hash()) > 0
+    assert x.plugins["plugin1"].get_hash != x.plugins["plugin2"].get_hash()
 
 
 @with_empty_base
@@ -69,3 +75,13 @@ def test_uninstall_plugin():
     x.uninstall_plugin("plugin1")
     assert len(x.plugins) == 1
     assert list(x.plugins.keys())[0] == "plugin2"
+
+
+@with_empty_base
+def test_get_plugin_env_dict():
+    x = PluginsManager(plugins_base_dir=BASE)
+    x.initialize_plugins_base()
+    _install_two_plugin(x)
+    e = x.plugins["plugin1"].get_plugin_env_dict()
+    assert e["GENERIC_CURRENT_PLUGIN_NAME"] == "plugin1"
+    assert e["GENERIC_PLUGIN_PLUGIN1_CUSTOM_FOO"] == "bar"
