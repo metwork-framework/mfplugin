@@ -1,6 +1,7 @@
 import os
 from mfutil import BashWrapper
-from mfplugin.utils import get_rpm_cmd, get_default_plugins_base_dir
+from mfplugin.utils import get_rpm_cmd, get_default_plugins_base_dir, \
+    BadPluginFile
 
 
 class PluginFile(object):
@@ -18,7 +19,7 @@ class PluginFile(object):
         else:
             self.plugins_base_dir = get_default_plugins_base_dir()
         if not os.path.isfile(plugin_filepath):
-            raise Exception("file: %s not found" % plugin_filepath)
+            raise BadPluginFile("file: %s not found" % plugin_filepath)
         self.plugin_filepath = plugin_filepath
         self.__loaded = False
 
@@ -31,12 +32,11 @@ class PluginFile(object):
                           '--qf "%s" "%s"' % (frmt, self.plugin_filepath))
         x = BashWrapper(cmd)
         if not x:
-            # FIXME: better class
-            raise Exception(x)
+            raise BadPluginFile(x)
         if x:
             tmp = x.stdout.split('~~~')
             if len(tmp) < 2:
-                raise Exception("incorrect output for cmd: %s" % cmd)
+                raise BadPluginFile("incorrect output for cmd: %s" % cmd)
             self._name = tmp[0]
             self._version = tmp[1]
             self._release = tmp[2]

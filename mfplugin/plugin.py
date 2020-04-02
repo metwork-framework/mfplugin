@@ -153,7 +153,7 @@ class Plugin(object):
             self._files = []
             self._is_installed = True
             return
-        cmd = get_rpm_cmd(self.plugins_base_dir, '-qi', '-p %s' % self.name)
+        cmd = get_rpm_cmd(self.plugins_base_dir, '-qi', self.name)
         x = BashWrapper(cmd)
         if not x:
             self._is_installed = False
@@ -171,7 +171,7 @@ class Plugin(object):
                 self._build_date = value
             if name == "size":
                 self._size = value
-        cmd = get_rpm_cmd(self.plugins_base_dir, '-ql -p %s' % self.name)
+        cmd = get_rpm_cmd(self.plugins_base_dir, '-ql', self.name)
         x = BashWrapper(cmd)
         if not x:
             raise Exception(x)

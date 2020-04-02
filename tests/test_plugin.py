@@ -1,6 +1,7 @@
-from common import with_empty_base, BASE  # common import must be first
 import os
 import pytest
+# common import must be before mfplugin* imports
+from common import with_empty_base, BASE, get_plugin_filepath
 from mfplugin.plugin import Plugin
 from mfplugin.utils import BadPlugin
 
@@ -9,15 +10,10 @@ CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 @with_empty_base
 def test_build_plugin():
-    home = os.path.join(CURRENT_DIR, "data", "plugin1")
-    x = Plugin(BASE, home)
-    assert x.name == "plugin1"
-    x.load()
-    assert not x.is_installed
-    assert not x.is_dev_linked
-    package_path = x.build()
-    assert os.path.isfile(package_path)
+    # this is going to build a plugin
+    package_path = get_plugin_filepath(BASE, "plugin1")
     assert package_path.endswith(".plugin")
+    os.unlink(package_path)
 
 
 @with_empty_base

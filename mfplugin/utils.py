@@ -1,6 +1,6 @@
 import re
 import os
-from mfutil import BashWrapperException
+from mfutil import BashWrapperException, BashWrapper
 
 MFMODULE = os.environ.get('MFMODULE', 'GENERIC')
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
@@ -49,10 +49,13 @@ def layerapi2_label_to_plugin_name(label):
     Returns:
          (string): the plugin name.
     """
-    if (not label.startswith("plugin_")) or \
-            (not label.endswith("@%s" % MFMODULE_LOWERCASE)):
-        raise BadPlugin("bad layerapi2_label: %s => is it really a plugin ?" %
-                        label)
+    if not label.startswith("plugin_"):
+        raise BadPlugin("bad layerapi2_label: %s => is it really a plugin? "
+                        "(it must start with 'plugin_')" % label)
+    if not label.endswith("@%s" % MFMODULE_LOWERCASE):
+        raise BadPlugin("bad layerapi2_label: %s => is it really a plugin? "
+                        "(it must end with '@%s')" %
+                        (label, MFMODULE_LOWERCASE))
     return label[7:].split('@')[0]
 
 
@@ -116,9 +119,6 @@ def validate_configparser(v, cpobj, schema):
         document[section] = {}
         for key in cpobj.options(section):
             document[section][key] = cpobj.get(section, key)
-    import json
-    print(json.dumps(document, indent=4))
-    print(json.dumps(schema, indent=4))
     return v.validate(document, schema)
 
 
@@ -166,8 +166,38 @@ class NotInstalledPlugin(MFPluginException):
     pass
 
 
+class AlreadyInstalledPlugin(MFPluginException):
+    """Exception raised when a plugin is already installed."""
+
+    pass
+
+
+class CantInstallPlugin(MFPluginException):
+    """Exception raised when we can't install a plugin."""
+
+    pass
+
+
+class CantUninstallPlugin(MFPluginException):
+    """Exception raised when we can't uninstall a plugin."""
+
+    pass
+
+
 class CantBuildPlugin(MFPluginException):
     """Exception raised when we can't build a plugin."""
+
+    pass
+
+
+class BadPluginFile(MFPluginException):
+    """Exception raised when a plugin file is bad."""
+
+    pass
+
+
+class PluginsBaseNotInitialized(MFPluginException):
+    """Exception raised when the plugins base is not initialized."""
 
     pass
 
@@ -198,3 +228,7 @@ def get_default_plugins_base_dir():
     if "MFMODULE_PLUGINS_BASE_DIR" in os.environ:
         return os.environ.get("MFMODULE_PLUGINS_BASE_DIR")
     return os.path.join(MFMODULE_RUNTIME_HOME, "var", "plugins")
+
+
+def _touch_conf_monitor_control_file():
+    BashWrapper("touch %s/var/conf_monitor" % MFMODULE_RUNTIME_HOME)
