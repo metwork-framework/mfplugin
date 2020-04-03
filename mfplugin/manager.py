@@ -17,8 +17,17 @@ from mfplugin.utils import get_default_plugins_base_dir, \
     _touch_conf_monitor_control_file
 
 
+__pdoc__ = {
+    "with_base_initialized": False,
+    "with_layerapi2_path": False,
+    "with_lock": False,
+    "PluginEnvContextManager": False
+}
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
 LOGGER = get_logger("mfplugin.manager")
+
+
+# FIXME: implement get_plugin_lock_path
 
 
 def with_base_initialized(f):
@@ -79,28 +88,21 @@ class PluginEnvContextManager(object):
 
 class PluginsManager(object):
 
-    plugin_class = None
-    configuration_class = None
-    command_class = None
-    plugins_base_dir = None
-    _plugins = None
-    initialized = None
-    __loaded = None
-
     def __init__(self, plugins_base_dir=None, plugin_class=Plugin,
                  configuration_class=Configuration,
                  command_class=Command):
         self.plugin_class = plugin_class
+        """Plugin class."""
         self.configuration_class = configuration_class
+        """Configuration class."""
         self.command_class = command_class
-        if plugins_base_dir is not None:
-            self.plugins_base_dir = plugins_base_dir
-        else:
-            self.plugins_base_dir = get_default_plugins_base_dir()
-        if os.path.isdir(os.path.join(self.plugins_base_dir, "base")):
-            self.initialized = True
-        else:
-            self.initialized = False
+        """Command class."""
+        self.plugins_base_dir = plugins_base_dir \
+            if plugins_base_dir is not None else get_default_plugins_base_dir()
+        """Plugin base directory (string)."""
+        self.initialized = \
+            os.path.isdir(os.path.join(self.plugins_base_dir, "base"))
+        """Is the plugin base directory initialized? (boolean)."""
         self.__loaded = False
 
     @with_lock
@@ -132,9 +134,9 @@ class PluginsManager(object):
 
     @with_base_initialized
     @with_layerapi2_path
-    def plugin_env_context(self, name):
+    def plugin_env_context(self, name, **kwargs):
         return PluginEnvContextManager(
-            self.plugins[name].get_plugin_env_dict())
+            self.plugins[name].get_plugin_env_dict(**kwargs))
 
     def _preuninstall_plugin(self, plugin):
         return BashWrapper("_plugins.preuninstall %s %s %s" %

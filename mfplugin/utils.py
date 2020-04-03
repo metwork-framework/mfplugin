@@ -88,33 +88,6 @@ def inside_a_plugin_env():
     return ("%s_CURRENT_PLUGIN_NAME" % MFMODULE) in os.environ
 
 
-def get_plugin_env_prefix(plugin_name):
-    """Return the env var prefix for the given plugin name.
-
-    Args:
-        plugin_name (string): the plugin name.
-
-    Returns:
-        The env var prefix for the plugin (string).
-    """
-    return "%s_PLUGIN_%s" % (MFMODULE, plugin_name.upper())
-
-
-def get_plugin_env(plugin_name, section, key):
-    """Return the env var name given a plugin_name and a configuration key.
-
-    Args:
-        plugin_name (string): the plugin name.
-        section (string): the name of the configuration section.
-        key (string): the name of the configuration key.
-
-    Returns:
-        The corresponding env var name.
-    """
-    return "%s_%s_%s" % (get_plugin_env_prefix(plugin_name),
-                         section.upper(), key.upper())
-
-
 def validate_configparser(v, cpobj, schema):
     document = {}
     for section in cpobj.sections():

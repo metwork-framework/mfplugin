@@ -8,6 +8,7 @@ from mfplugin.utils import validate_configparser, \
 from mfplugin.command import COMMAND_SCHEMA, Command
 from mfplugin.utils import BadPlugin, resolve, to_bool
 
+
 MFMODULE = os.environ.get("MFMODULE", "GENERIC")
 MFMODULE_LOWERCASE = os.environ.get("MFMODULE_LOWERCASE", "generic")
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
@@ -169,7 +170,6 @@ class Configuration(object):
 
     def load_full(self):
         self.load()
-        [x.load() for x in self.commands]
 
     @property
     def commands(self):
@@ -179,8 +179,6 @@ class Configuration(object):
     @property
     def version(self):
         self.load()
-        import json
-        print(json.dumps(self._doc, indent=4))
         return self._doc['general']['_version']
 
     @property

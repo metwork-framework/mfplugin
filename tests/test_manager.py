@@ -2,6 +2,7 @@ import os
 # common import must be before mfplugin.* imports
 from common import with_empty_base, BASE, get_plugin_filepath
 from mfplugin.manager import PluginsManager
+from mfplugin.compat import get_installed_plugins, get_plugin_info
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -53,6 +54,24 @@ def test_install_plugin():
     assert x.plugins["plugin1"].format_version == [1, 0, 0]
     assert len(x.plugins["plugin1"].get_hash()) > 0
     assert x.plugins["plugin1"].get_hash != x.plugins["plugin2"].get_hash()
+
+
+@with_empty_base
+def test_compat():
+    x = PluginsManager(plugins_base_dir=BASE)
+    x.initialize_plugins_base()
+    _install_two_plugin(x)
+    tmp = get_installed_plugins(plugins_base_dir=BASE)
+    assert len(tmp) == 2
+    p1 = [x for x in tmp if x["name"] == "plugin1"][0]
+    assert p1["name"] == "plugin1"
+    assert p1["version"] == "1.2.3"
+    info = get_plugin_info("plugin1", mode="name",
+                           plugins_base_dir=BASE)
+    assert info["metadatas"]["name"] == "plugin1"
+    assert info["metadatas"]["version"] == "1.2.3"
+    assert "build_host" in info["metadatas"]
+    assert len(info["files"]) > 0
 
 
 @with_empty_base

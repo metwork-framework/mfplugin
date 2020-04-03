@@ -1,6 +1,11 @@
 import os
 from mfplugin.utils import to_bool
 
+__pdoc__ = {
+    "coerce_log_split_stdout_sterr": False,
+    "coerce_log_split_multiple_workers": False
+}
+
 
 def coerce_log_split_stdout_sterr(val):
     if val == "AUTO":

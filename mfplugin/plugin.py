@@ -6,7 +6,7 @@ import glob
 from gitignore_parser import parse_gitignore
 from mflog import get_logger
 from mfutil import BashWrapper, get_unique_hexa_identifier, mkdir_p_or_die, \
-    BashWrapperOrRaise
+    BashWrapperOrRaise, mkdir_p
 from mfutil.layerapi2 import LayerApi2Wrapper
 from mfplugin.configuration import Configuration
 from mfplugin.command import Command
@@ -25,39 +25,23 @@ SPEC_TEMPLATE = os.path.join(os.path.dirname(os.path.realpath(__file__)),
 
 class Plugin(object):
 
-    __loaded = None
-    _configuration = None
-    name = None
-    home = None
-    _version = None
-    _release = None
-    _files = None
-    _raw_metadata_output = None
-    _raw_files_output = None
-    _format_version = None
-    _build_host = None
-    _build_date = None
-    _size = None
-    _release_ignored_files = None
-    configuration_class = None
-    command_class = None
-    plugins_base_dir = None
-    is_dev_linked = None
-    _is_installed = None
-
     def __init__(self, plugins_base_dir, home,
                  configuration_class=Configuration,
                  command_class=Command):
         self.configuration_class = configuration_class
+        """Configuration class."""
         self.command_class = command_class
-        self.home = os.path.abspath(home)
-        if plugins_base_dir is not None:
-            self.plugins_base_dir = plugins_base_dir
-        else:
-            self.plugins_base_dir = get_default_plugins_base_dir()
+        """Command class."""
+        self.home = os.path.abspath(os.path.realpath(home))
+        """Plugin home (absolute and normalized string)."""
+        self.plugins_base_dir = plugins_base_dir \
+            if plugins_base_dir is not None else get_default_plugins_base_dir()
+        """Plugin base directory (string)."""
         self.name = self._get_name()
+        """Plugin name (string)."""
         self.is_dev_linked = os.path.islink(os.path.join(self.plugins_base_dir,
                                                          self.name))
+        """Is the plugin a devlink? (boolean)."""
         self.__loaded = False
         # FIXME: detect broken symlink
 
@@ -84,7 +68,9 @@ class Plugin(object):
         self.configuration.load()
 
     def get_plugin_env_dict(self, add_current_envs=True,
-                            add_plugin_dir_to_python_path=True):
+                            add_plugin_dir_to_python_path=True,
+                            set_tmp_dir=True,
+                            fix_layerapi2_layers_path=True):
         lines = []
         res = {}
         try:
@@ -119,6 +105,13 @@ class Plugin(object):
                 res["PYTHONPATH"] = self.home + ":" + old_python_path
             else:
                 res["PYTHONPATH"] = self.home
+        if set_tmp_dir:
+            tmpdir = os.path.join(MFMODULE_RUNTIME_HOME, "tmp", self.name)
+            if mkdir_p(tmpdir, nodebug=True, nowarning=True):
+                res["TMPDIR"] = tmpdir
+        if fix_layerapi2_layers_path:
+            tmp = os.environ.get("LAYERAPI2_LAYERS_PATH", "").split(":")
+            res["LAYERAPI2_LAYERS_PATH"] = ":".join([self.home] + tmp)
         return res
 
     def _load_version_release(self):
@@ -216,6 +209,7 @@ class Plugin(object):
         if not x:
             raise Exception(x)
         self._is_installed = True
+        self._raw_files_output = x.stdout
         self._files = [x.strip() for x in x.stdout.split('\n')]
 
     def get_hash(self):
@@ -320,3 +314,18 @@ class Plugin(object):
     def release_ignored_files(self):
         self.load()
         return self._release_ignored_files
+
+    @property
+    def raw_metadata_output(self):
+        self.load()
+        return self._raw_metadata_output
+
+    @property
+    def raw_files_output(self):
+        self.load()
+        return self._raw_files_output
+
+    @property
+    def files(self):
+        self.load()
+        return self._files
