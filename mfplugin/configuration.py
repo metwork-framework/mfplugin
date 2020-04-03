@@ -6,7 +6,7 @@ from mflog import get_logger
 from mfplugin.utils import validate_configparser, \
     cerberus_errors_to_human_string
 from mfplugin.command import COMMAND_SCHEMA, Command
-from mfplugin.utils import BadPlugin, resolve
+from mfplugin.utils import BadPlugin, resolve, to_bool
 
 MFMODULE = os.environ.get("MFMODULE", "GENERIC")
 MFMODULE_LOWERCASE = os.environ.get("MFMODULE_LOWERCASE", "generic")
@@ -25,6 +25,10 @@ SCHEMA = {
             "_maintainer": {"required": True, "type": "string",
                             "minlength": 1},
             "_vendor": {"required": True, "type": "string", "minlength": 1},
+            "_add_plugin_dir_to_python_path": {"required": False,
+                                               "type": "boolean",
+                                               "default": True,
+                                               "coerce": (str, to_bool)},
         },
     },
     "app_*": {
@@ -55,21 +59,6 @@ LOGGER = get_logger("configuration.py")
 
 class Configuration(object):
 
-    __loaded = None
-    plugin_name = None
-    plugin_home = None
-    _parser = None
-    _version = None
-    _commands = None
-    _config_filepath = None
-    _summary = None
-    _license = None
-    _packager = None
-    _vendor = None
-    _url = None
-    command_class = None
-    paths = None
-
     def __init__(self, plugin_name, plugin_home, config_filepath=None,
                  command_class=Command):
         self.plugin_name = plugin_name
@@ -91,6 +80,8 @@ class Configuration(object):
             "/etc/metwork.config.d/%s/plugins/%s.ini" %
             (MFMODULE_LOWERCASE, self.plugin_name)
         ]
+        self._commands = None
+        self._doc = None
         self.__loaded = False
 
     def get_schema(self):
@@ -167,16 +158,10 @@ class Configuration(object):
             )
             raise BadPlugin("invalid configuration file: %s" %
                             self._config_filepath)
-        self._version = self._parser.get("general", "_version")
-        self._summary = self._parser.get("general", "_summary")
-        self._license = self._parser.get("general", "_license")
-        self._maintainer = self._parser.get("general", "_maintainer")
-        self._packager = self._maintainer
-        self._vendor = self._parser.get("general", "_vendor")
-        self._url = self._parser.get("general", "_url")
+        self._doc = v.document
         self._commands = []
         for prefix in ("app_", "extra_daemon_"):
-            for section in [x for x in self._parser.sections()
+            for section in [x for x in self._doc.keys()
                             if x.startswith(prefix)]:
                 c = self.command_class
                 command = c(self.plugin_name, self._parser, section)
@@ -194,34 +179,35 @@ class Configuration(object):
     @property
     def version(self):
         self.load()
-        return self._version
+        import json
+        print(json.dumps(self._doc, indent=4))
+        return self._doc['general']['_version']
 
     @property
     def summary(self):
         self.load()
-        return self._summary
+        return self._doc['general']['_summary']
 
     @property
     def license(self):
         self.load()
-        return self._license
+        return self._doc['general']['_license']
 
     @property
     def maintainer(self):
         self.load()
-        return self._maintainer
+        return self._doc['general']['_maintainer']
 
     @property
     def packager(self):
-        self.load()
-        return self._packager
+        return self.maintainer
 
     @property
     def vendor(self):
         self.load()
-        return self._vendor
+        return self._doc['general']['_vendor']
 
     @property
     def url(self):
         self.load()
-        return self._url
+        return self._doc['general']['_url']

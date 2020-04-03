@@ -83,7 +83,8 @@ class Plugin(object):
         self.load()
         self.configuration.load()
 
-    def get_plugin_env_dict(self, add_current_envs=True):
+    def get_plugin_env_dict(self, add_current_envs=True,
+                            add_plugin_dir_to_python_path=True):
         lines = []
         res = {}
         try:
@@ -112,12 +113,13 @@ class Plugin(object):
             res["%s_CURRENT_PLUGIN_DIR" % MFMODULE] = self.home
             res["%s_CURRENT_PLUGIN_LABEL" % MFMODULE] = \
                 plugin_name_to_layerapi2_label(self.name)
+        if add_plugin_dir_to_python_path:
+            old_python_path = os.environ.get("PYTHONPATH", None)
+            if old_python_path:
+                res["PYTHONPATH"] = self.home + ":" + old_python_path
+            else:
+                res["PYTHONPATH"] = self.home
         return res
-
-    def set_plugin_env(self):
-        env_var_dict = self.get_plugin_env_dict()
-        for k, v in env_var_dict.items():
-            os.environ[k] = v
 
     def _load_version_release(self):
         if not self._is_installed:

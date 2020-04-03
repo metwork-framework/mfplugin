@@ -2,6 +2,7 @@ import os
 import filelock
 import shutil
 import glob
+from functools import wraps
 from mflog import get_logger
 from mfutil import mkdir_p_or_die, BashWrapperOrRaise, BashWrapper
 from mfutil.layerapi2 import LayerApi2Wrapper
@@ -21,6 +22,7 @@ LOGGER = get_logger("mfplugin.manager")
 
 
 def with_base_initialized(f):
+    @wraps(f)
     def wrapper(self, *args, **kwargs):
         if not self.initialized:
             raise PluginsBaseNotInitialized("plugins base not initialized")
@@ -29,6 +31,7 @@ def with_base_initialized(f):
 
 
 def with_layerapi2_path(f):
+    @wraps(f)
     def wrapper(self, *args, **kwargs):
         old_mlp = os.environ.get('LAYERAPI2_LAYERS_PATH', '')
         os.environ['LAYERAPI2_LAYERS_PATH'] = \
@@ -40,6 +43,7 @@ def with_layerapi2_path(f):
 
 
 def with_lock(f):
+    @wraps(f)
     def wrapper(*args, **kwargs):
         lock_path = os.path.join(MFMODULE_RUNTIME_HOME, 'tmp',
                                  "plugin_management_lock")
@@ -54,6 +58,23 @@ def with_lock(f):
                            " => another plugins.install/uninstall "
                            "running ?")
     return wrapper
+
+
+class PluginEnvContextManager(object):
+
+    __env_dict = None
+    __saved_environ = None
+
+    def __init__(self, env_dict):
+        self.__env_dict = env_dict
+
+    def __enter__(self):
+        self.__saved_environ = os.environ.copy()
+        for key, value in self.__env_dict.items():
+            os.environ[key] = value
+
+    def __exit__(self, type, value, traceback):
+        os.environ = self.__saved_environ
 
 
 class PluginsManager(object):
@@ -93,6 +114,7 @@ class PluginsManager(object):
         self.initialized = True
 
     @with_base_initialized
+    @with_layerapi2_path
     def make_plugin(self, plugin_home):
         pc = self.plugin_class
         return pc(self.plugins_base_dir, plugin_home,
@@ -107,6 +129,12 @@ class PluginsManager(object):
         if home is None:
             raise NotInstalledPlugin("plugin: %s not installed" % name)
         return self.make_plugin(home)
+
+    @with_base_initialized
+    @with_layerapi2_path
+    def plugin_env_context(self, name):
+        return PluginEnvContextManager(
+            self.plugins[name].get_plugin_env_dict())
 
     def _preuninstall_plugin(self, plugin):
         return BashWrapper("_plugins.preuninstall %s %s %s" %
@@ -185,6 +213,7 @@ class PluginsManager(object):
 
     @with_lock
     @with_base_initialized
+    @with_layerapi2_path
     def install_plugin(self, plugin_filepath):
         """Install a plugin from a .plugin file.
 
@@ -203,6 +232,7 @@ class PluginsManager(object):
 
     @with_lock
     @with_base_initialized
+    @with_layerapi2_path
     def uninstall_plugin(self, name):
         """Uninstall a plugin.
 
@@ -220,6 +250,7 @@ class PluginsManager(object):
 
     @with_lock
     @with_base_initialized
+    @with_layerapi2_path
     def develop_plugin(self, plugin_home):
         """Install a plugin in development mode.
 

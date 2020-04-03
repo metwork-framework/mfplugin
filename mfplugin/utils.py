@@ -241,3 +241,10 @@ def resolve(val):
         # If it's "null" or linux socket
         return val
     return get_ipv4_for_hostname(val)
+
+
+def to_bool(strng):
+    try:
+        return strng.lower() in ('1', 'true', 'yes', 'y', 't')
+    except Exception:
+        return False

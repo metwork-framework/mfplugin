@@ -85,3 +85,17 @@ def test_get_plugin_env_dict():
     e = x.plugins["plugin1"].get_plugin_env_dict()
     assert e["GENERIC_CURRENT_PLUGIN_NAME"] == "plugin1"
     assert e["GENERIC_PLUGIN_PLUGIN1_CUSTOM_FOO"] == "bar"
+
+
+@with_empty_base
+def test_plugin_env_context():
+    x = PluginsManager(plugins_base_dir=BASE)
+    x.initialize_plugins_base()
+    _install_two_plugin(x)
+    assert "GENERIC_PLUGIN_PLUGIN1_CUSTOM_FOO" not in os.environ
+    assert "GENERIC_CURRENT_PLUGIN_NAME" not in os.environ
+    with x.plugin_env_context("plugin1"):
+        assert os.environ["GENERIC_PLUGIN_PLUGIN1_CUSTOM_FOO"] == "bar"
+        assert os.environ["GENERIC_CURRENT_PLUGIN_NAME"] == "plugin1"
+    assert "GENERIC_PLUGIN_PLUGIN1_CUSTOM_FOO" not in os.environ
+    assert "GENERIC_CURRENT_PLUGIN_NAME" not in os.environ
