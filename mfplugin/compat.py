@@ -57,7 +57,8 @@ def get_plugin_info(name_or_filepath, mode="auto", plugins_base_dir=None):
             If not set, the default plugins base directory path is used.
 
     Returns:
-        (dict): dictionary containing plugin information
+        (dict): dictionary containing plugin information (or None if the
+            plugin is not installed (name mode).
 
     Raises:
         FIXME: if the plugins base is not initialized.
@@ -79,8 +80,8 @@ def get_plugin_info(name_or_filepath, mode="auto", plugins_base_dir=None):
         manager = PluginsManager(plugins_base_dir)
         try:
             plugin = manager.plugins[name_or_filepath]
-        except Exception:
-            raise NotInstalledPlugin("plugin: %s is not installed")
+        except KeyError:
+            return None
     else:
         raise Exception("unknown mode: %s" % mode)
     res = {
@@ -135,3 +136,11 @@ def get_plugin_hash(name_or_filepath, mode="auto", plugins_base_dir=None):
                      infos['metadatas'].get('version', 'unknown'),
                      infos['metadatas'].get('release', 'unknown')])
     return hashlib.md5(sid.encode('utf8')).hexdigest()
+
+
+def get_layer_home_from_plugin_name(name, plugins_base_dir=None):
+    infos = get_plugin_info(name, mode="name",
+                            plugins_base_dir=plugins_base_dir)
+    if infos is None:
+        return None
+    return infos['home']

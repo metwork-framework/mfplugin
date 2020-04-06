@@ -31,13 +31,15 @@ setup(
         "console_scripts": [
             "plugin_wrapper = mfplugin.cli_tools.plugin_wrapper:main",
             "plugins.list = mfplugin.cli_tools.plugins_list:main",
-            "plugins.info = mfutil.cli_tools.plugins_info:main",
-            "plugins.hash = mfutil.cli_tools.plugins_hash:main",
-            "_plugins.init = mfutil.cli_tools.plugins_init:main",
-            "_plugins.make = mfutil.cli_tools.plugins_make:main",
-            "_plugins.develop = mfutil.cli_tools.plugins_develop:main",
-            "plugins.install = mfutil.cli_tools.plugins_install:main",
-            "plugins.uninstall = mfutil.cli_tools.plugins_uninstall:main"
+            "plugins.info = mfplugin.cli_tools.plugins_info:main",
+            "plugins.hash = mfplugin.cli_tools.plugins_hash:main",
+            "_plugins.init = mfplugin.cli_tools.plugins_init:main",
+            "_plugins.make = mfplugin.cli_tools.plugins_make:main",
+            "_plugins.develop = mfplugin.cli_tools.plugins_develop:main",
+            "plugins.install = mfplugin.cli_tools.plugins_install:main",
+            "plugins.uninstall = mfplugin.cli_tools.plugins_uninstall:main",
+            "plugins_validate_name = "
+            "mfplugin.cli_tools.plugins_validate_name:main",
         ]
     }
 )

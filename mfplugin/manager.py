@@ -14,7 +14,7 @@ from mfplugin.utils import get_default_plugins_base_dir, \
     get_rpm_cmd, BadPlugin, plugin_name_to_layerapi2_label, \
     NotInstalledPlugin, AlreadyInstalledPlugin, CantInstallPlugin, \
     CantUninstallPlugin, PluginsBaseNotInitialized, \
-    _touch_conf_monitor_control_file
+    _touch_conf_monitor_control_file, get_plugin_lock_path
 
 
 __pdoc__ = {
@@ -25,9 +25,6 @@ __pdoc__ = {
 }
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
 LOGGER = get_logger("mfplugin.manager")
-
-
-# FIXME: implement get_plugin_lock_path
 
 
 def with_base_initialized(f):
@@ -54,10 +51,7 @@ def with_layerapi2_path(f):
 def with_lock(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        lock_dir = os.path.join(MFMODULE_RUNTIME_HOME, 'tmp')
-        lock_path = os.path.join(lock_dir, "plugin_management_lock")
-        if not os.path.isdir(lock_dir):
-            mkdir_p_or_die(lock_dir)
+        lock_path = get_plugin_lock_path()
         lock = filelock.FileLock(lock_path, timeout=10)
         try:
             with lock.acquire(poll_intervall=1):

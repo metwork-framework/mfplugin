@@ -95,11 +95,15 @@ class PluginFile(object):
         return self._raw_metadata_output
 
     @property
-    def raw_file_output(self):
+    def raw_files_output(self):
         self.load()
-        return self._raw_file_output
+        return self._raw_files_output
 
     @property
     def files(self):
         self.load()
         return self._files
+
+    @property
+    def home(self):
+        return None

@@ -1,6 +1,7 @@
 import re
 import os
-from mfutil import BashWrapperException, BashWrapper, get_ipv4_for_hostname
+from mfutil import BashWrapperException, BashWrapper, get_ipv4_for_hostname, \
+    mkdir_p_or_die
 
 MFMODULE = os.environ.get('MFMODULE', 'GENERIC')
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
@@ -224,3 +225,11 @@ def to_bool(strng):
         return strng.lower() in ('1', 'true', 'yes', 'y', 't')
     except Exception:
         return False
+
+
+def get_plugin_lock_path():
+    lock_dir = os.path.join(MFMODULE_RUNTIME_HOME, 'tmp')
+    lock_path = os.path.join(lock_dir, "plugin_management_lock")
+    if not os.path.isdir(lock_dir):
+        mkdir_p_or_die(lock_dir)
+    return lock_path
