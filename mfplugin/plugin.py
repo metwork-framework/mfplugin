@@ -9,7 +9,8 @@ from mfutil import BashWrapper, get_unique_hexa_identifier, mkdir_p_or_die, \
     BashWrapperOrRaise, mkdir_p
 from mfutil.layerapi2 import LayerApi2Wrapper
 from mfplugin.configuration import Configuration
-from mfplugin.command import ExtraDaemonCommand, AppCommand
+from mfplugin.app import App
+from mfplugin.extra_daemon import ExtraDaemon
 from mfplugin.utils import BadPlugin, get_default_plugins_base_dir, \
     get_rpm_cmd, layerapi2_label_file_to_plugin_name, validate_plugin_name, \
     CantBuildPlugin, get_current_envs, PluginEnvContextManager
@@ -27,14 +28,14 @@ class Plugin(object):
 
     def __init__(self, plugins_base_dir, home,
                  configuration_class=Configuration,
-                 extra_daemon_command_class=ExtraDaemonCommand,
-                 app_command_class=AppCommand):
+                 extra_daemon_class=ExtraDaemon,
+                 app_class=App):
         self.configuration_class = configuration_class
         """Configuration class."""
-        self.app_command_class = app_command_class
-        """App Command class."""
-        self.extra_daemon_command_class = extra_daemon_command_class
-        """Extra Daemon Command class."""
+        self.app_class = app_class
+        """App class."""
+        self.extra_daemon_class = extra_daemon_class
+        """Extra Daemon class."""
         self.home = os.path.abspath(os.path.realpath(home))
         """Plugin home (absolute and normalized string)."""
         self.plugins_base_dir = plugins_base_dir \
@@ -61,8 +62,8 @@ class Plugin(object):
         c = self.configuration_class
         self._configuration = c(
             self.name, self.home,
-            app_command_class=self.app_command_class,
-            extra_daemon_command_class=self.extra_daemon_command_class
+            app_class=self.app_class,
+            extra_daemon_class=self.extra_daemon_class
         )
         self._load_format_version()
         self._load_rpm_infos()

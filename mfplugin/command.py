@@ -1,5 +1,6 @@
 import os
-from mfplugin.utils import NON_REQUIRED_INTEGER_DEFAULT_0, to_bool
+from mfplugin.utils import NON_REQUIRED_INTEGER_DEFAULT_0, to_bool, \
+    NON_REQUIRED_STRING_DEFAULT_EMPTY
 
 __pdoc__ = {
     "coerce_log_split_stdout_sterr": False,
@@ -17,7 +18,7 @@ def coerce_log_split_stdout_sterr(val):
 def coerce_log_split_multiple_workers(val):
     if val == "AUTO":
         return to_bool(
-            os.environ["%s_LOG_SPLIT_MULTIPLE_WORKERS" % MFMODULE])
+            os.environ["%s_LOG_TRY_TO_SPLIT_MULTIPLE_WORKERS" % MFMODULE])
     return to_bool(val)
 
 
@@ -25,20 +26,18 @@ MFMODULE = os.environ.get("MFMODULE", "GENERIC")
 COMMAND_SCHEMA = {
     "log_split_stdout_stderr": {
         "required": False,
-        "type": "string",
-        "allowed": ["1", "0", "AUTO"],
+        "type": "boolean",
         "default": "AUTO",
         "coerce": (str, coerce_log_split_stdout_sterr),
     },
     "log_split_multiple_workers": {
         "required": False,
-        "type": "string",
-        "allowed": ["1", "0", "AUTO"],
+        "type": "boolean",
         "default": "AUTO",
         "coerce": (str, coerce_log_split_multiple_workers),
     },
-    "numprocesses": {"required": True, "type": "integer", "coerce": int},
-    "_cmd_and_args": {"required": True, "type": "string", "minlength": 1},
+    "numprocesses": NON_REQUIRED_INTEGER_DEFAULT_0,
+    "_cmd_and_args": NON_REQUIRED_STRING_DEFAULT_EMPTY,
     "graceful_timeout": NON_REQUIRED_INTEGER_DEFAULT_0,
     "max_age": NON_REQUIRED_INTEGER_DEFAULT_0,
     "rlimit_as": NON_REQUIRED_INTEGER_DEFAULT_0,
@@ -93,13 +92,3 @@ class Command(object):
     @property
     def rlimit_fsize(self):
         return self._doc_fragment["rlimit_fsize"]
-
-
-class ExtraDaemonCommand(Command):
-
-    pass
-
-
-class AppCommand(Command):
-
-    pass

@@ -1,5 +1,6 @@
 import re
 import os
+import importlib
 from mfutil import BashWrapperException, BashWrapper, get_ipv4_for_hostname, \
     mkdir_p_or_die
 
@@ -269,6 +270,15 @@ def get_current_envs(plugin_name, plugin_home):
         "%s_CURRENT_PLUGIN_DIR" % MFMODULE: plugin_home,
         "%s_CURRENT_PLUGIN_LABEL" % MFMODULE: plugin_label
     }
+
+
+def get_class_from_fqn(class_fqn):
+    class_name = class_fqn.split('.')[-1]
+    module_path = ".".join(class_fqn.split('.')[0:-1])
+    if module_path == "":
+        raise Exception("incorrect class_fqn: %s" % class_fqn)
+    mod = importlib.import_module(module_path)
+    return getattr(mod, class_name)
 
 
 NON_REQUIRED_BOOLEAN = {

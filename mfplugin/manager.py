@@ -8,7 +8,8 @@ from mfutil import mkdir_p_or_die, BashWrapperOrRaise, BashWrapper
 from mfutil.layerapi2 import LayerApi2Wrapper
 from mfplugin.plugin import Plugin
 from mfplugin.configuration import Configuration
-from mfplugin.command import AppCommand, ExtraDaemonCommand
+from mfplugin.app import App
+from mfplugin.extra_daemon import ExtraDaemon
 from mfplugin.file import PluginFile
 from mfplugin.utils import get_default_plugins_base_dir, \
     get_rpm_cmd, BadPlugin, plugin_name_to_layerapi2_label, \
@@ -68,16 +69,16 @@ class PluginsManager(object):
 
     def __init__(self, plugins_base_dir=None, plugin_class=Plugin,
                  configuration_class=Configuration,
-                 app_command_class=AppCommand,
-                 extra_daemon_command_class=ExtraDaemonCommand):
+                 app_class=App,
+                 extra_daemon_class=ExtraDaemon):
         self.plugin_class = plugin_class
         """Plugin class."""
         self.configuration_class = configuration_class
         """Configuration class."""
-        self.app_command_class = app_command_class
-        """App Command class."""
-        self.extra_daemon_command_class = extra_daemon_command_class
-        """ExtraDaemon Command class."""
+        self.app_class = app_class
+        """App class."""
+        self.extra_daemon_class = extra_daemon_class
+        """ExtraDaemon class."""
         self.plugins_base_dir = plugins_base_dir \
             if plugins_base_dir is not None else get_default_plugins_base_dir()
         """Plugin base directory (string)."""
@@ -102,8 +103,8 @@ class PluginsManager(object):
         pc = self.plugin_class
         return pc(self.plugins_base_dir, plugin_home,
                   configuration_class=self.configuration_class,
-                  app_command_class=self.app_command_class,
-                  extra_daemon_command_class=self.extra_daemon_command_class)
+                  app_class=self.app_class,
+                  extra_daemon_class=self.extra_daemon_class)
 
     @with_base_initialized
     @with_layerapi2_path

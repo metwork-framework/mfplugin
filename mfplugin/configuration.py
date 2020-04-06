@@ -5,7 +5,8 @@ from cerberus import Validator
 from mflog import get_logger
 from mfplugin.utils import validate_configparser, \
     cerberus_errors_to_human_string
-from mfplugin.command import COMMAND_SCHEMA, ExtraDaemonCommand, AppCommand
+from mfplugin.app import APP_SCHEMA, App
+from mfplugin.extra_daemon import EXTRA_DAEMON_SCHEMA, ExtraDaemon
 from mfplugin.utils import BadPlugin, resolve, get_current_envs, \
     PluginEnvContextManager, NON_REQUIRED_BOOLEAN_DEFAULT_TRUE
 
@@ -37,7 +38,7 @@ SCHEMA = {
         "type": "dict",
         "allow_unknown": True,
         "schema": {
-            **COMMAND_SCHEMA
+            **APP_SCHEMA
         },
     },
     "extra_daemon_*": {
@@ -45,7 +46,7 @@ SCHEMA = {
         "type": "dict",
         "allow_unknown": True,
         "schema": {
-            **COMMAND_SCHEMA
+            **EXTRA_DAEMON_SCHEMA
         },
     },
     "custom": {
@@ -61,12 +62,12 @@ LOGGER = get_logger("configuration.py")
 class Configuration(object):
 
     def __init__(self, plugin_name, plugin_home, config_filepath=None,
-                 extra_daemon_command_class=ExtraDaemonCommand,
-                 app_command_class=AppCommand):
+                 extra_daemon_class=ExtraDaemon,
+                 app_class=App):
         self.plugin_name = plugin_name
         self.plugin_home = plugin_home
-        self.app_command_class = app_command_class
-        self.extra_daemon_command_class = extra_daemon_command_class
+        self.app_class = app_class
+        self.extra_daemon_class = extra_daemon_class
         if config_filepath is None:
             self._config_filepath = os.path.join(plugin_home, "config.ini")
         else:
@@ -162,18 +163,18 @@ class Configuration(object):
             raise BadPlugin("invalid configuration file: %s" %
                             self._config_filepath)
         self._doc = v.document
-        self._app_commands = []
-        self._extra_daemon_commands = []
+        self._apps = []
+        self._extra_daemons = []
         # FIXME: step mfdata ?
         for section in [x for x in self._doc.keys() if x.startswith("app_")]:
-            c = self.app_command_class
-            command = c(self.plugin_name, self._parser, section)
-            self._app_commands.append(command)
+            c = self.app_class
+            command = c(self.plugin_name, self._doc[section])
+            self._apps.append(command)
         for section in [x for x in self._doc.keys()
                         if x.startswith("extra_daemon_")]:
-            c = self.extra_daemon_command_class
-            command = c(self.plugin_name, self._parser, section)
-            self._extra_daemon_commands.append(command)
+            c = self.extra_daemon_class
+            command = c(self.plugin_name, self._doc[section])
+            self._extra_daemons.append(command)
 
     def load(self):
         with PluginEnvContextManager(get_current_envs(self.plugin_name,
@@ -184,14 +185,14 @@ class Configuration(object):
         self.load()
 
     @property
-    def app_commands(self):
+    def apps(self):
         self.load()
-        return self._app_commands
+        return self._apps
 
     @property
-    def extra_daemon_commands(self):
+    def extra_daemons(self):
         self.load()
-        return self._extra_daemon_commands
+        return self._extra_daemons
 
     @property
     def version(self):
