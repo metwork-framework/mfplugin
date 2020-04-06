@@ -20,6 +20,8 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.7
+    - name: Install rpm
+      run: sudo apt-get install rpm
     - name: Install dev dependencies
       run: |
         python -m pip install --upgrade pip
