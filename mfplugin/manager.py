@@ -141,12 +141,18 @@ class PluginsManager(object):
             self.plugins[name].get_plugin_env_dict(**kwargs))
 
     def _preuninstall_plugin(self, plugin):
-        return BashWrapper("_plugins.preuninstall %s %s %s" %
-                           (plugin.name, plugin.version, plugin.release))
+        if shutil.which("_plugins.preuninstall"):
+            return BashWrapper("_plugins.preuninstall %s %s %s" %
+                               (plugin.name, plugin.version, plugin.release))
+        else:
+            return BashWrapper("true")
 
     def _postinstall_plugin(self, plugin):
-        return BashWrapper("_plugins.postinstall %s %s %s" %
-                           (plugin.name, plugin.version, plugin.release))
+        if shutil.which("_plugins.postinstall"):
+            return BashWrapper("_plugins.postinstall %s %s %s" %
+                               (plugin.name, plugin.version, plugin.release))
+        else:
+            return BashWrapper("true")
 
     def _uninstall_plugin(self, name):
         p = self.get_plugin(name)
