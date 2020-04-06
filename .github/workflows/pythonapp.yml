@@ -60,7 +60,6 @@ jobs:
         port: 22
         target: doc
         source: html/mfplugin/*
-        strip_components: 2
     - name: Coverage
       run: |
         make coverage
