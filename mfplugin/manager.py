@@ -54,8 +54,10 @@ def with_layerapi2_path(f):
 def with_lock(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        lock_path = os.path.join(MFMODULE_RUNTIME_HOME, 'tmp',
-                                 "plugin_management_lock")
+        lock_dir = os.path.join(MFMODULE_RUNTIME_HOME, 'tmp')
+        lock_path = os.path.join(lock_dir, "plugin_management_lock")
+        if not os.path.isdir(lock_dir):
+            mkdir_p_or_die(lock_dir)
         lock = filelock.FileLock(lock_path, timeout=10)
         try:
             with lock.acquire(poll_intervall=1):
