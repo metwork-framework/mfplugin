@@ -20,8 +20,11 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.7
-    - name: Install rpm
-      run: sudo apt-get install rpm
+    - name: Install system dependencies
+      run: |
+        sudo apt-get install rpm
+        wget -O /usr/local/lib/liblayerapi2.so "https://metwork-framework.org/pub/misc/mfutil_c/liblayerapi2.so"
+        wget -O /usr/local/lib/libmfutil.so "https://metwork-framework.org/pub/misc/mfutil_c/libmfutil.so"
     - name: Install dev dependencies
       run: |
         python -m pip install --upgrade pip
