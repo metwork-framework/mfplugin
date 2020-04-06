@@ -6,6 +6,7 @@ MFMODULE = os.environ.get('MFMODULE', 'GENERIC')
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
 MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')
 PLUGIN_NAME_REGEXP = "^[A-Za-z0-9_-]+$"
+UNDER_METWORK_ENV = 'MFCONFIG' in os.environ
 
 
 def validate_plugin_name(plugin_name):
@@ -179,15 +180,17 @@ class PluginsBaseNotInitialized(MFPluginException):
 
 def get_rpm_cmd(plugins_base_dir, command, extra_args="", add_prefix=False):
     base = os.path.join(plugins_base_dir, "base")
+    if UNDER_METWORK_ENV:
+        before = 'layer_wrapper --layers=rpm@mfext -- '
+    else:
+        before = ''
     if add_prefix:
-        cmd = 'layer_wrapper --layers=rpm@mfext -- rpm %s ' \
-            '--dbpath %s --prefix %s %s' % \
+        cmd = 'rpm %s --dbpath %s --prefix %s %s' % \
             (command, base, plugins_base_dir, extra_args)
     else:
-        cmd = 'layer_wrapper --layers=rpm@mfext -- rpm %s ' \
-            '--dbpath %s %s' % \
+        cmd = 'rpm %s --dbpath %s %s' % \
             (command, base, extra_args)
-    return cmd
+    return before + cmd
 
 
 def get_default_plugins_base_dir():
