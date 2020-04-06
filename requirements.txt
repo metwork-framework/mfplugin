@@ -1,3 +1,4 @@
 opinionated-configparser
 cerberus
 git+https://github.com/metwork-framework/mfutil.git#egg=mfutil
+git+https://github.com/metwork-framework/mflog.git#egg=mflog
