@@ -57,7 +57,8 @@ def main():
         print(e)
         sys.exit(2)
     echo_ok()
-    is_dangerous_plugin(name, plugins_base_dir=args.plugins_base_dir)
+    p = manager.get_plugin(name)
+    p.print_dangerous_state()
 
 
 if __name__ == '__main__':

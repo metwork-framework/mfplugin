@@ -4,7 +4,7 @@ import os
 import argparse
 import sys
 from mfplugin.manager import PluginsManager
-from mfplugin.utils import BadPluginFile, AlreadyInstalledPlugin
+from mfplugin.utils import AlreadyInstalledPlugin
 from mfutil.cli import echo_ok, echo_running, echo_nok, echo_bold
 
 DESCRIPTION = "develop a plugin from a directory"
@@ -29,12 +29,17 @@ def main():
     echo_running("- Devlinking plugin %s..." % args.name)
     try:
         manager.develop_plugin(args.plugin_path)
+    except AlreadyInstalledPlugin:
+        echo_nok()
+        echo_bold("ERROR: the plugin is already installed")
+        sys.exit(3)
     except Exception as e:
         echo_nok()
         print(e)
         sys.exit(2)
     echo_ok()
-    is_dangerous_plugin(args.name)
+    p = manager.get_plugin(args.name)
+    p.print_dangerous_state()
 
 
 if __name__ == '__main__':

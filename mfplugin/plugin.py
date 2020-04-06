@@ -179,6 +179,11 @@ class Plugin(object):
                                             start=self.home)
                         )
 
+    def print_dangerous_state(self):
+        res = BashWrapper("_plugins.is_dangerous %s" % (self.name,))
+        if res and res.stdout and len(res.stdout) > 0:
+            print(res.stdout)
+
     def _load_rpm_infos(self):
         if self.is_dev_linked:
             self._raw_metadata_output = "DEV_LINK"
