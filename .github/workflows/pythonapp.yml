@@ -38,3 +38,6 @@ jobs:
     - name: Doc
       run: |
         make doc
+    - name: Coverage
+      run: |
+        make coverage
