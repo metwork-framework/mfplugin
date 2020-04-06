@@ -3,11 +3,32 @@ import os
 from mfutil import BashWrapperException, BashWrapper, get_ipv4_for_hostname, \
     mkdir_p_or_die
 
+__pdoc__ = {
+    "PluginEnvContextManager": False
+}
 MFMODULE = os.environ.get('MFMODULE', 'GENERIC')
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
 MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')
 PLUGIN_NAME_REGEXP = "^[A-Za-z0-9_-]+$"
 UNDER_METWORK_ENV = 'MFCONFIG' in os.environ
+
+
+class PluginEnvContextManager(object):
+
+    __env_dict = None
+    __saved_environ = None
+
+    def __init__(self, env_dict):
+        self.__env_dict = env_dict
+
+    def __enter__(self):
+        self.__saved_environ = dict(os.environ)
+        for key, value in self.__env_dict.items():
+            os.environ[key] = value
+
+    def __exit__(self, type, value, traceback):
+        os.environ.clear()
+        os.environ.update(self.__saved_environ)
 
 
 def validate_plugin_name(plugin_name):
@@ -227,9 +248,58 @@ def to_bool(strng):
         return False
 
 
+def null_to_empty(value):
+    if value == "null":
+        return ""
+    return value
+
+
 def get_plugin_lock_path():
     lock_dir = os.path.join(MFMODULE_RUNTIME_HOME, 'tmp')
     lock_path = os.path.join(lock_dir, "plugin_management_lock")
     if not os.path.isdir(lock_dir):
         mkdir_p_or_die(lock_dir)
     return lock_path
+
+
+def get_current_envs(plugin_name, plugin_home):
+    plugin_label = plugin_name_to_layerapi2_label(plugin_name)
+    return {
+        "%s_CURRENT_PLUGIN_NAME" % MFMODULE: plugin_name,
+        "%s_CURRENT_PLUGIN_DIR" % MFMODULE: plugin_home,
+        "%s_CURRENT_PLUGIN_LABEL" % MFMODULE: plugin_label
+    }
+
+
+NON_REQUIRED_BOOLEAN = {
+    "required": False,
+    "type": "boolean",
+    "coerce": (str, to_bool)
+}
+NON_REQUIRED_BOOLEAN_DEFAULT_FALSE = {
+    **NON_REQUIRED_BOOLEAN,
+    "default": False
+}
+NON_REQUIRED_BOOLEAN_DEFAULT_TRUE = {
+    **NON_REQUIRED_BOOLEAN,
+    "default": True
+}
+NON_REQUIRED_INTEGER = {
+    "required": False,
+    "type": "integer",
+    "coerce": int
+}
+NON_REQUIRED_INTEGER_DEFAULT_0 = {
+    **NON_REQUIRED_INTEGER,
+    "default": 0
+}
+NON_REQUIRED_STRING = {
+    "required": False,
+    "type": "string",
+    "coerce": (str, null_to_empty),
+    "default": ""
+}
+NON_REQUIRED_STRING_DEFAULT_EMPTY = {
+    **NON_REQUIRED_STRING,
+    "default": ""
+}

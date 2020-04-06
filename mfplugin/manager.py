@@ -8,14 +8,13 @@ from mfutil import mkdir_p_or_die, BashWrapperOrRaise, BashWrapper
 from mfutil.layerapi2 import LayerApi2Wrapper
 from mfplugin.plugin import Plugin
 from mfplugin.configuration import Configuration
-from mfplugin.command import Command
+from mfplugin.command import AppCommand, ExtraDaemonCommand
 from mfplugin.file import PluginFile
 from mfplugin.utils import get_default_plugins_base_dir, \
     get_rpm_cmd, BadPlugin, plugin_name_to_layerapi2_label, \
     NotInstalledPlugin, AlreadyInstalledPlugin, CantInstallPlugin, \
     CantUninstallPlugin, PluginsBaseNotInitialized, \
     _touch_conf_monitor_control_file, get_plugin_lock_path
-
 
 __pdoc__ = {
     "with_base_initialized": False,
@@ -65,34 +64,20 @@ def with_lock(f):
     return wrapper
 
 
-class PluginEnvContextManager(object):
-
-    __env_dict = None
-    __saved_environ = None
-
-    def __init__(self, env_dict):
-        self.__env_dict = env_dict
-
-    def __enter__(self):
-        self.__saved_environ = os.environ.copy()
-        for key, value in self.__env_dict.items():
-            os.environ[key] = value
-
-    def __exit__(self, type, value, traceback):
-        os.environ = self.__saved_environ
-
-
 class PluginsManager(object):
 
     def __init__(self, plugins_base_dir=None, plugin_class=Plugin,
                  configuration_class=Configuration,
-                 command_class=Command):
+                 app_command_class=AppCommand,
+                 extra_daemon_command_class=ExtraDaemonCommand):
         self.plugin_class = plugin_class
         """Plugin class."""
         self.configuration_class = configuration_class
         """Configuration class."""
-        self.command_class = command_class
-        """Command class."""
+        self.app_command_class = app_command_class
+        """App Command class."""
+        self.extra_daemon_command_class = extra_daemon_command_class
+        """ExtraDaemon Command class."""
         self.plugins_base_dir = plugins_base_dir \
             if plugins_base_dir is not None else get_default_plugins_base_dir()
         """Plugin base directory (string)."""
@@ -117,7 +102,8 @@ class PluginsManager(object):
         pc = self.plugin_class
         return pc(self.plugins_base_dir, plugin_home,
                   configuration_class=self.configuration_class,
-                  command_class=self.command_class)
+                  app_command_class=self.app_command_class,
+                  extra_daemon_command_class=self.extra_daemon_command_class)
 
     @with_base_initialized
     @with_layerapi2_path
@@ -131,8 +117,7 @@ class PluginsManager(object):
     @with_base_initialized
     @with_layerapi2_path
     def plugin_env_context(self, name, **kwargs):
-        return PluginEnvContextManager(
-            self.plugins[name].get_plugin_env_dict(**kwargs))
+        return self.plugins[name].plugin_env_context(**kwargs)
 
     def _preuninstall_plugin(self, plugin):
         if shutil.which("_plugins.preuninstall"):

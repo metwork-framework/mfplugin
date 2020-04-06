@@ -9,10 +9,10 @@ from mfutil import BashWrapper, get_unique_hexa_identifier, mkdir_p_or_die, \
     BashWrapperOrRaise, mkdir_p
 from mfutil.layerapi2 import LayerApi2Wrapper
 from mfplugin.configuration import Configuration
-from mfplugin.command import Command
+from mfplugin.command import ExtraDaemonCommand, AppCommand
 from mfplugin.utils import BadPlugin, get_default_plugins_base_dir, \
     get_rpm_cmd, layerapi2_label_file_to_plugin_name, validate_plugin_name, \
-    CantBuildPlugin, plugin_name_to_layerapi2_label
+    CantBuildPlugin, get_current_envs, PluginEnvContextManager
 
 LOGGER = get_logger("mfplugin.py")
 MFEXT_HOME = os.environ.get("MFEXT_HOME", None)
@@ -27,11 +27,14 @@ class Plugin(object):
 
     def __init__(self, plugins_base_dir, home,
                  configuration_class=Configuration,
-                 command_class=Command):
+                 extra_daemon_command_class=ExtraDaemonCommand,
+                 app_command_class=AppCommand):
         self.configuration_class = configuration_class
         """Configuration class."""
-        self.command_class = command_class
-        """Command class."""
+        self.app_command_class = app_command_class
+        """App Command class."""
+        self.extra_daemon_command_class = extra_daemon_command_class
+        """Extra Daemon Command class."""
         self.home = os.path.abspath(os.path.realpath(home))
         """Plugin home (absolute and normalized string)."""
         self.plugins_base_dir = plugins_base_dir \
@@ -56,8 +59,11 @@ class Plugin(object):
             return
         self.__loaded = True
         c = self.configuration_class
-        self._configuration = c(self.name, self.home,
-                                command_class=self.command_class)
+        self._configuration = c(
+            self.name, self.home,
+            app_command_class=self.app_command_class,
+            extra_daemon_command_class=self.extra_daemon_command_class
+        )
         self._load_format_version()
         self._load_rpm_infos()
         self._load_version_release()
@@ -95,10 +101,7 @@ class Plugin(object):
             ignore_keys_starting_with="_", add_resolved=True)
         res.update(env_var_dict)
         if add_current_envs:
-            res["%s_CURRENT_PLUGIN_NAME" % MFMODULE] = self.name
-            res["%s_CURRENT_PLUGIN_DIR" % MFMODULE] = self.home
-            res["%s_CURRENT_PLUGIN_LABEL" % MFMODULE] = \
-                plugin_name_to_layerapi2_label(self.name)
+            res.update(get_current_envs(self.name, self.home))
         if add_plugin_dir_to_python_path:
             old_python_path = os.environ.get("PYTHONPATH", None)
             if old_python_path:
@@ -113,6 +116,9 @@ class Plugin(object):
             tmp = os.environ.get("LAYERAPI2_LAYERS_PATH", "").split(":")
             res["LAYERAPI2_LAYERS_PATH"] = ":".join([self.home] + tmp)
         return res
+
+    def plugin_env_context(self, **kwargs):
+        return PluginEnvContextManager(self.get_plugin_env_dict(**kwargs))
 
     def _load_version_release(self):
         if not self._is_installed:

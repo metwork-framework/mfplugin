@@ -2,7 +2,6 @@ import os
 import hashlib
 from mfplugin.manager import PluginsManager
 from mfplugin.file import PluginFile
-from mfplugin.utils import NotInstalledPlugin
 
 
 def get_installed_plugins(plugins_base_dir=None):

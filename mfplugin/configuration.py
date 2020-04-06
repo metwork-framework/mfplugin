@@ -5,8 +5,9 @@ from cerberus import Validator
 from mflog import get_logger
 from mfplugin.utils import validate_configparser, \
     cerberus_errors_to_human_string
-from mfplugin.command import COMMAND_SCHEMA, Command
-from mfplugin.utils import BadPlugin, resolve, to_bool
+from mfplugin.command import COMMAND_SCHEMA, ExtraDaemonCommand, AppCommand
+from mfplugin.utils import BadPlugin, resolve, get_current_envs, \
+    PluginEnvContextManager, NON_REQUIRED_BOOLEAN_DEFAULT_TRUE
 
 
 MFMODULE = os.environ.get("MFMODULE", "GENERIC")
@@ -26,10 +27,9 @@ SCHEMA = {
             "_maintainer": {"required": True, "type": "string",
                             "minlength": 1},
             "_vendor": {"required": True, "type": "string", "minlength": 1},
-            "_add_plugin_dir_to_python_path": {"required": False,
-                                               "type": "boolean",
-                                               "default": True,
-                                               "coerce": (str, to_bool)},
+            "_add_plugin_dir_to_python_path": {
+                **NON_REQUIRED_BOOLEAN_DEFAULT_TRUE
+            }
         },
     },
     "app_*": {
@@ -61,10 +61,12 @@ LOGGER = get_logger("configuration.py")
 class Configuration(object):
 
     def __init__(self, plugin_name, plugin_home, config_filepath=None,
-                 command_class=Command):
+                 extra_daemon_command_class=ExtraDaemonCommand,
+                 app_command_class=AppCommand):
         self.plugin_name = plugin_name
         self.plugin_home = plugin_home
-        self.command_class = command_class
+        self.app_command_class = app_command_class
+        self.extra_daemon_command_class = extra_daemon_command_class
         if config_filepath is None:
             self._config_filepath = os.path.join(plugin_home, "config.ini")
         else:
@@ -140,7 +142,7 @@ class Configuration(object):
                     schema[section] = orig.copy()
         return schema
 
-    def load(self):
+    def __load(self):
         if self.__loaded:
             return
         self.__loaded = True
@@ -160,21 +162,36 @@ class Configuration(object):
             raise BadPlugin("invalid configuration file: %s" %
                             self._config_filepath)
         self._doc = v.document
-        self._commands = []
-        for prefix in ("app_", "extra_daemon_"):
-            for section in [x for x in self._doc.keys()
-                            if x.startswith(prefix)]:
-                c = self.command_class
-                command = c(self.plugin_name, self._parser, section)
-                self._commands.append(command)
+        self._app_commands = []
+        self._extra_daemon_commands = []
+        # FIXME: step mfdata ?
+        for section in [x for x in self._doc.keys() if x.startswith("app_")]:
+            c = self.app_command_class
+            command = c(self.plugin_name, self._parser, section)
+            self._app_commands.append(command)
+        for section in [x for x in self._doc.keys()
+                        if x.startswith("extra_daemon_")]:
+            c = self.extra_daemon_command_class
+            command = c(self.plugin_name, self._parser, section)
+            self._extra_daemon_commands.append(command)
+
+    def load(self):
+        with PluginEnvContextManager(get_current_envs(self.plugin_name,
+                                                      self.plugin_home)):
+            self.__load()
 
     def load_full(self):
         self.load()
 
     @property
-    def commands(self):
+    def app_commands(self):
         self.load()
-        return self._commands
+        return self._app_commands
+
+    @property
+    def extra_daemon_commands(self):
+        self.load()
+        return self._extra_daemon_commands
 
     @property
     def version(self):

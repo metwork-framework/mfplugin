@@ -1,5 +1,5 @@
 import os
-from mfplugin.utils import to_bool
+from mfplugin.utils import NON_REQUIRED_INTEGER_DEFAULT_0, to_bool
 
 __pdoc__ = {
     "coerce_log_split_stdout_sterr": False,
@@ -22,12 +22,6 @@ def coerce_log_split_multiple_workers(val):
 
 
 MFMODULE = os.environ.get("MFMODULE", "GENERIC")
-NON_REQUIRED_DEFAULT_0_INTEGER = {
-    "required": False,
-    "type": "integer",
-    "default": 0,
-    "coerce": int
-}
 COMMAND_SCHEMA = {
     "log_split_stdout_stderr": {
         "required": False,
@@ -45,12 +39,12 @@ COMMAND_SCHEMA = {
     },
     "numprocesses": {"required": True, "type": "integer", "coerce": int},
     "_cmd_and_args": {"required": True, "type": "string", "minlength": 1},
-    "graceful_timeout": NON_REQUIRED_DEFAULT_0_INTEGER,
-    "max_age": NON_REQUIRED_DEFAULT_0_INTEGER,
-    "rlimit_as": NON_REQUIRED_DEFAULT_0_INTEGER,
-    "rlimit_nofile": NON_REQUIRED_DEFAULT_0_INTEGER,
-    "rlimit_stack": NON_REQUIRED_DEFAULT_0_INTEGER,
-    "rlimit_fsize": NON_REQUIRED_DEFAULT_0_INTEGER
+    "graceful_timeout": NON_REQUIRED_INTEGER_DEFAULT_0,
+    "max_age": NON_REQUIRED_INTEGER_DEFAULT_0,
+    "rlimit_as": NON_REQUIRED_INTEGER_DEFAULT_0,
+    "rlimit_nofile": NON_REQUIRED_INTEGER_DEFAULT_0,
+    "rlimit_stack": NON_REQUIRED_INTEGER_DEFAULT_0,
+    "rlimit_fsize": NON_REQUIRED_INTEGER_DEFAULT_0
 }
 
 
@@ -99,3 +93,13 @@ class Command(object):
     @property
     def rlimit_fsize(self):
         return self._doc_fragment["rlimit_fsize"]
+
+
+class ExtraDaemonCommand(Command):
+
+    pass
+
+
+class AppCommand(Command):
+
+    pass
