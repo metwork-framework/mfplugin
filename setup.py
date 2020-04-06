@@ -12,11 +12,12 @@ setup(
     name='mfplugin',
     packages=find_packages(),
     install_requires=install_requires,
+    include_package_data=True,
     entry_points={
         "console_scripts": [
             "plugin_wrapper = mfplugin.cli_tools.plugin_wrapper:main",
             "plugins.list = mfplugin.cli_tools.plugins_list:main",
-            #"plugins.info = mfutil.cli_tools.plugins_info:main",
+            "plugins.info = mfutil.cli_tools.plugins_info:main",
             "plugins.hash = mfutil.cli_tools.plugins_hash:main",
             "_plugins.init = mfutil.cli_tools.plugins_init:main",
             "_plugins.make = mfutil.cli_tools.plugins_make:main",
