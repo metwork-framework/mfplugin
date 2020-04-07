@@ -1,6 +1,6 @@
 import os
 from mfplugin.utils import NON_REQUIRED_INTEGER_DEFAULT_0, to_bool, \
-    NON_REQUIRED_STRING_DEFAULT_EMPTY
+    NON_REQUIRED_STRING_DEFAULT_EMPTY, NON_REQUIRED_BOOLEAN_DEFAULT_FALSE
 
 __pdoc__ = {
     "coerce_log_split_stdout_sterr": False,
@@ -43,15 +43,21 @@ COMMAND_SCHEMA = {
     "rlimit_as": NON_REQUIRED_INTEGER_DEFAULT_0,
     "rlimit_nofile": NON_REQUIRED_INTEGER_DEFAULT_0,
     "rlimit_stack": NON_REQUIRED_INTEGER_DEFAULT_0,
-    "rlimit_fsize": NON_REQUIRED_INTEGER_DEFAULT_0
+    "rlimit_fsize": NON_REQUIRED_INTEGER_DEFAULT_0,
+    "debug": NON_REQUIRED_BOOLEAN_DEFAULT_FALSE
 }
 
 
 class Command(object):
 
-    def __init__(self, plugin_name, doc_fragment):
+    def __init__(self, plugin_name, name, doc_fragment):
         self.plugin_name = plugin_name
         self._doc_fragment = doc_fragment
+        self.name = name
+
+    def duplicate(self, new_name):
+        c = self.__class__
+        return c(self.plugin_name, new_name, dict(self._doc_fragment))
 
     @property
     def cmd_and_args(self):
@@ -92,3 +98,7 @@ class Command(object):
     @property
     def rlimit_fsize(self):
         return self._doc_fragment["rlimit_fsize"]
+
+    @property
+    def debug(self):
+        return self._doc_fragment["debug"]

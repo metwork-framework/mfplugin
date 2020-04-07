@@ -93,46 +93,21 @@ class Configuration(object):
     def get_schema(self):
         return SCHEMA
 
-    def get_configuration_env_dict(self, ignore_keys_starting_with=None,
-                                   add_resolved=True):
-        def add_env_var(env_var_dict, section, option, val):
-            name = "%s_PLUGIN_%s_%s_%s" % \
-                (MFMODULE, self.plugin_name.upper(),
-                 section.upper().replace('-', '_'),
-                 option.upper().replace('-', '_'))
-            env_var_dict[name] = val
+    def get_configuration_env_dict(self, ignore_keys_starting_with=None):
         self.load()
-        res = {}
-        for section in self._parser.sections():
-            for option in self._parser.options(section):
+        env_var_dict = {}
+        for section in self._doc.keys():
+            for option in self._doc[section].keys():
                 if ignore_keys_starting_with and \
                         option.strip().startswith(ignore_keys_starting_with):
                     continue
                 val = self._parser.get(section, option)
-                if add_resolved:
-                    if option.lower().endswith("_hostname") or \
-                            option.lower() == "hostname":
-                        if not self._parser.has_option(section,
-                                                       "%s_ip" % option):
-                            new_val = resolve(val)
-                            if new_val is None:
-                                new_val = "dns_error"
-                            add_env_var(res, section, option + "_IP", new_val)
-                    elif option.lower().endswith("_hostnames") or \
-                            option.lower() == "hostnames":
-                        if not self._parser.has_option(section,
-                                                       "%s_ips" % option):
-                            hostname_list = val.split(";")
-                            new_vals = []
-                            for hostname in hostname_list:
-                                new_val = resolve(hostname)
-                                if new_val is None:
-                                    new_val = "dns_error"
-                                new_vals.append(new_val)
-                            add_env_var(res, section, option + "_IP",
-                                        ";".join(new_vals))
-                add_env_var(res, section, option, val)
-        return res
+                name = "%s_PLUGIN_%s_%s_%s" % \
+                    (MFMODULE, self.plugin_name.upper(),
+                     section.upper().replace('-', '_'),
+                     option.upper().replace('-', '_'))
+                env_var_dict[name] = val
+        return env_var_dict
 
     def __get_schema(self):
         schema = self.get_schema()
@@ -145,9 +120,39 @@ class Configuration(object):
                     schema[section] = orig.copy()
         return schema
 
+    def get_final_document(self, validated_document):
+        return validated_document
+
+    def __get_final_document(self, validated_document):
+        vdocument = {}
+        for section in validated_document.keys():
+            for option in validated_document[section].keys():
+                val = validated_document[section][option]
+                if option.endswith("_hostname") or option == "hostname":
+                    if "%s_ip" % option not in validated_document[section]:
+                        new_val = resolve(val)
+                        if new_val is None:
+                            new_val = "dns_error"
+                        vdocument[section]["%s_ip" % option] = new_val
+                elif option.endswith("_hostnames") or option == "hostnames":
+                    if "%s_ips" % option not in validated_document[section]:
+                        hostname_list = val.split(";")
+                        new_vals = []
+                        for hostname in hostname_list:
+                            new_val = resolve(hostname)
+                            if new_val is None:
+                                new_val = "dns_error"
+                            new_vals.append(new_val)
+                        vdocument[section]["%s_ips" % option] = \
+                            ";".join(new_vals)
+                if section not in vdocument:
+                    vdocument[section] = {}
+                vdocument[section][option] = val
+        return self.get_final_document(vdocument)
+
     def __load(self):
         if self.__loaded:
-            return
+            return False
         self.__loaded = True
         self._parser = OpinionatedConfigParser()
         self._parser.read(self.paths)
@@ -164,24 +169,37 @@ class Configuration(object):
             )
             raise BadPlugin("invalid configuration file: %s" %
                             self._config_filepath)
-        self._doc = v.document
+        self._doc = self.__get_final_document(v.document)
         self._apps = []
         self._extra_daemons = []
         # FIXME: step mfdata ?
         for section in [x for x in self._doc.keys() if x.startswith("app_")]:
             c = self.app_class
-            command = c(self.plugin_name, self._doc[section])
-            self._apps.append(command)
+            command = c(self.plugin_name,
+                        section.replace('app_', '', 1),
+                        self._doc[section])
+            self.add_app(command)
         for section in [x for x in self._doc.keys()
                         if x.startswith("extra_daemon_")]:
             c = self.extra_daemon_class
-            command = c(self.plugin_name, self._doc[section])
-            self._extra_daemons.append(command)
+            command = c(self.plugin_name,
+                        section.replace('extra_daemon_', '', 1),
+                        self._doc[section])
+            self.add_extra_daemon(command)
+        return True
 
     def load(self):
         with PluginEnvContextManager(get_current_envs(self.plugin_name,
                                                       self.plugin_home)):
-            self.__load()
+            return self.__load()
+
+    def add_app(self, app):
+        self.load()
+        self._apps.append(app)
+
+    def add_extra_daemon(self, extra_daemon):
+        self.load()
+        self._extra_daemons.append(extra_daemon)
 
     def load_full(self):
         self.load()

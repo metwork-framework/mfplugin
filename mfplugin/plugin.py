@@ -60,7 +60,7 @@ class Plugin(object):
 
     def load(self):
         if self.__loaded is True:
-            return
+            return False
         self.__loaded = True
         c = self.configuration_class
         self._configuration = c(
@@ -72,6 +72,7 @@ class Plugin(object):
         self._load_rpm_infos()
         self._load_version_release()
         self._load_release_ignored_files()
+        return True
 
     def load_full(self):
         self.load()
@@ -102,7 +103,7 @@ class Plugin(object):
                     continue
                 res.update(p.get_plugin_env_dict(add_current_envs=False))
         env_var_dict = self.configuration.get_configuration_env_dict(
-            ignore_keys_starting_with="_", add_resolved=True)
+            ignore_keys_starting_with="_")
         res.update(env_var_dict)
         if add_current_envs:
             res.update(get_current_envs(self.name, self.home))

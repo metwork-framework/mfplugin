@@ -259,7 +259,7 @@ class PluginsManager(object):
 
     def load(self):
         if self.__loaded:
-            return
+            return False
         self.__loaded = True
         self._plugins = {}
         for directory in glob.glob(os.path.join(self.plugins_base_dir, "*")):
@@ -274,6 +274,7 @@ class PluginsManager(object):
                                "(details: %s)" % (directory, e))
                 continue
             self._plugins[plugin.name] = plugin
+        return True
 
     def load_full(self):
         self.load()
