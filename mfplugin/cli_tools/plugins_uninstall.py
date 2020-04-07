@@ -3,9 +3,9 @@
 import os
 import argparse
 import sys
-from mfutil.plugins import uninstall_plugin, \
-    MFUtilPluginNotInstalled, MFUtilPluginCantUninstall, inside_a_plugin_env, \
-    is_plugins_base_initialized
+from mfplugin.utils import inside_a_plugin_env
+from mfplugin.manager import PluginsManager
+from mfplugin.utils import NotInstalledPlugin
 from mfutil.cli import echo_running, echo_nok, echo_ok, echo_bold
 
 DESCRIPTION = "uninstall a plugin"
@@ -28,7 +28,8 @@ def main():
     if inside_a_plugin_env():
         print("ERROR: Don't use plugins.install/uninstall inside a plugin_env")
         sys.exit(1)
-    if not is_plugins_base_initialized(args.plugins_base_dir):
+    manager = PluginsManager(plugins_base_dir=args.plugins_base_dir)
+    if not manager.initialized:
         echo_bold("ERROR: the module is not initialized")
         echo_bold("       => start it once before installing your plugin")
         print()
@@ -37,12 +38,11 @@ def main():
         sys.exit(3)
     echo_running("- Uninstalling plugin %s..." % name)
     try:
-        uninstall_plugin(name, ignore_errors=args.force,
-                         plugins_base_dir=args.plugins_base_dir)
-    except MFUtilPluginNotInstalled:
+        manager.uninstall_plugin(name)
+    except NotInstalledPlugin:
         echo_nok("not installed")
         sys.exit(1)
-    except MFUtilPluginCantUninstall as e:
+    except Exception as e:
         echo_nok()
         print(e)
         sys.exit(2)
