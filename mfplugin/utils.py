@@ -1,5 +1,6 @@
 import re
 import os
+import json
 import importlib
 from mfutil import BashWrapperException, BashWrapper, get_ipv4_for_hostname, \
     mkdir_p_or_die
@@ -25,6 +26,7 @@ class PluginEnvContextManager(object):
     def __enter__(self):
         self.__saved_environ = dict(os.environ)
         for key, value in self.__env_dict.items():
+            print(key, value)
             os.environ[key] = value
 
     def __exit__(self, type, value, traceback):
@@ -303,6 +305,20 @@ def get_app_class(app_class_arg, default):
 def get_extra_daemon_class(extra_daemon_class_arg, default):
     return __get_class(extra_daemon_class_arg, "MFPLUGIN_EXTRA_DAEMON_CLASS",
                        default)
+
+
+def is_jsonable(x):
+    try:
+        json.dumps(x)
+        return True
+    except Exception:
+        return False
+
+
+def get_nice_dump(val):
+    def default(o):
+        return f"<<non-serializable: {type(o).__qualname__}"
+    return json.dumps(val, indent=4, default=default)
 
 
 NON_REQUIRED_BOOLEAN = {

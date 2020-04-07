@@ -1,5 +1,6 @@
 import os
 import fnmatch
+import inspect
 from opinionated_configparser import OpinionatedConfigParser
 from cerberus import Validator
 from mflog import get_logger
@@ -9,7 +10,7 @@ from mfplugin.app import APP_SCHEMA, App
 from mfplugin.extra_daemon import EXTRA_DAEMON_SCHEMA, ExtraDaemon
 from mfplugin.utils import BadPlugin, resolve, get_current_envs, \
     PluginEnvContextManager, NON_REQUIRED_BOOLEAN_DEFAULT_TRUE, \
-    get_app_class, get_extra_daemon_class
+    get_app_class, get_extra_daemon_class, get_nice_dump, is_jsonable
 
 
 MFMODULE = os.environ.get("MFMODULE", "GENERIC")
@@ -101,12 +102,12 @@ class Configuration(object):
                 if ignore_keys_starting_with and \
                         option.strip().startswith(ignore_keys_starting_with):
                     continue
-                val = self._parser.get(section, option)
+                val = self._doc[section][option]
                 name = "%s_PLUGIN_%s_%s_%s" % \
                     (MFMODULE, self.plugin_name.upper(),
                      section.upper().replace('-', '_'),
                      option.upper().replace('-', '_'))
-                env_var_dict[name] = val
+                env_var_dict[name] = "%s" % val
         return env_var_dict
 
     def __get_schema(self):
@@ -119,6 +120,13 @@ class Configuration(object):
                 if fnmatch.fnmatch(section, key):
                     schema[section] = orig.copy()
         return schema
+
+    def _get_debug(self):
+        self.load()
+        res = {x: y for x, y in inspect.getmembers(self)
+               if is_jsonable(y) and not x.startswith('_')
+               and not x.startswith('raw_')}
+        return res
 
     def get_final_document(self, validated_document):
         return validated_document
@@ -148,7 +156,16 @@ class Configuration(object):
                 if section not in vdocument:
                     vdocument[section] = {}
                 vdocument[section][option] = val
-        return self.get_final_document(vdocument)
+        try:
+            return self.get_final_document(vdocument)
+        except BadPlugin:
+            # we raise this exception
+            raise
+        except Exception:
+            print("exception catched during get_final_document(), vdocument:")
+            print(get_nice_dump(vdocument))
+            print("=> reraising")
+            raise
 
     def __load(self):
         if self.__loaded:

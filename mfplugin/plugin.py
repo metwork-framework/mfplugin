@@ -1,6 +1,7 @@
 import os
 import hashlib
 import envtpl
+import inspect
 import shutil
 import glob
 from gitignore_parser import parse_gitignore
@@ -14,7 +15,8 @@ from mfplugin.extra_daemon import ExtraDaemon
 from mfplugin.utils import BadPlugin, get_default_plugins_base_dir, \
     get_rpm_cmd, layerapi2_label_file_to_plugin_name, validate_plugin_name, \
     CantBuildPlugin, get_current_envs, PluginEnvContextManager, \
-    get_configuration_class, get_app_class, get_extra_daemon_class
+    get_configuration_class, get_app_class, get_extra_daemon_class, \
+    is_jsonable
 
 LOGGER = get_logger("mfplugin.py")
 MFEXT_HOME = os.environ.get("MFEXT_HOME", None)
@@ -51,6 +53,14 @@ class Plugin(object):
         """Is the plugin a devlink? (boolean)."""
         self.__loaded = False
         # FIXME: detect broken symlink
+
+    def _get_debug(self):
+        self.load()
+        res = {x: y for x, y in inspect.getmembers(self)
+               if is_jsonable(y) and not x.startswith('_')
+               and not x.startswith('raw_')}
+        res['configuration'] = self.configuration._get_debug()
+        return res
 
     def _get_name(self):
         llfpath = os.path.join(self.home, ".layerapi2_label")
