@@ -13,7 +13,8 @@ from mfplugin.app import App
 from mfplugin.extra_daemon import ExtraDaemon
 from mfplugin.utils import BadPlugin, get_default_plugins_base_dir, \
     get_rpm_cmd, layerapi2_label_file_to_plugin_name, validate_plugin_name, \
-    CantBuildPlugin, get_current_envs, PluginEnvContextManager
+    CantBuildPlugin, get_current_envs, PluginEnvContextManager, \
+    get_configuration_class, get_app_class, get_extra_daemon_class
 
 LOGGER = get_logger("mfplugin.py")
 MFEXT_HOME = os.environ.get("MFEXT_HOME", None)
@@ -27,14 +28,16 @@ SPEC_TEMPLATE = os.path.join(os.path.dirname(os.path.realpath(__file__)),
 class Plugin(object):
 
     def __init__(self, plugins_base_dir, home,
-                 configuration_class=Configuration,
-                 extra_daemon_class=ExtraDaemon,
-                 app_class=App):
-        self.configuration_class = configuration_class
+                 configuration_class=None,
+                 extra_daemon_class=None,
+                 app_class=None):
+        self.configuration_class = get_configuration_class(configuration_class,
+                                                           Configuration)
         """Configuration class."""
-        self.app_class = app_class
+        self.app_class = get_app_class(app_class, App)
         """App class."""
-        self.extra_daemon_class = extra_daemon_class
+        self.extra_daemon_class = get_extra_daemon_class(extra_daemon_class,
+                                                         ExtraDaemon)
         """Extra Daemon class."""
         self.home = os.path.abspath(os.path.realpath(home))
         """Plugin home (absolute and normalized string)."""

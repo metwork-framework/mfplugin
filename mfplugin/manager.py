@@ -15,7 +15,8 @@ from mfplugin.utils import get_default_plugins_base_dir, \
     get_rpm_cmd, BadPlugin, plugin_name_to_layerapi2_label, \
     NotInstalledPlugin, AlreadyInstalledPlugin, CantInstallPlugin, \
     CantUninstallPlugin, PluginsBaseNotInitialized, \
-    _touch_conf_monitor_control_file, get_plugin_lock_path
+    _touch_conf_monitor_control_file, get_plugin_lock_path, \
+    get_extra_daemon_class, get_app_class, get_configuration_class
 
 __pdoc__ = {
     "with_base_initialized": False,
@@ -67,17 +68,17 @@ def with_lock(f):
 
 class PluginsManager(object):
 
-    def __init__(self, plugins_base_dir=None, plugin_class=Plugin,
-                 configuration_class=Configuration,
-                 app_class=App,
+    def __init__(self, plugins_base_dir=None,
+                 configuration_class=None,
+                 app_class=None,
                  extra_daemon_class=ExtraDaemon):
-        self.plugin_class = plugin_class
-        """Plugin class."""
-        self.configuration_class = configuration_class
+        self.configuration_class = get_configuration_class(configuration_class,
+                                                           Configuration)
         """Configuration class."""
-        self.app_class = app_class
+        self.app_class = get_app_class(app_class, App)
         """App class."""
-        self.extra_daemon_class = extra_daemon_class
+        self.extra_daemon_class = get_extra_daemon_class(extra_daemon_class,
+                                                         ExtraDaemon)
         """ExtraDaemon class."""
         self.plugins_base_dir = plugins_base_dir \
             if plugins_base_dir is not None else get_default_plugins_base_dir()
@@ -100,11 +101,10 @@ class PluginsManager(object):
     @with_base_initialized
     @with_layerapi2_path
     def make_plugin(self, plugin_home):
-        pc = self.plugin_class
-        return pc(self.plugins_base_dir, plugin_home,
-                  configuration_class=self.configuration_class,
-                  app_class=self.app_class,
-                  extra_daemon_class=self.extra_daemon_class)
+        return Plugin(self.plugins_base_dir, plugin_home,
+                      configuration_class=self.configuration_class,
+                      app_class=self.app_class,
+                      extra_daemon_class=self.extra_daemon_class)
 
     @with_base_initialized
     @with_layerapi2_path

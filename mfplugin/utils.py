@@ -281,6 +281,30 @@ def get_class_from_fqn(class_fqn):
     return getattr(mod, class_name)
 
 
+def __get_class(class_arg, env, default):
+    if class_arg is not None:
+        return class_arg
+    if env in os.environ:
+        class_fqn = os.environ[env]
+        return get_class_from_fqn(class_fqn)
+    return default
+
+
+def get_configuration_class(configuration_class_arg, default):
+    return __get_class(configuration_class_arg, "MFPLUGIN_CONFIGURATION_CLASS",
+                       default)
+
+
+def get_app_class(app_class_arg, default):
+    return __get_class(app_class_arg, "MFPLUGIN_APP_CLASS",
+                       default)
+
+
+def get_extra_daemon_class(extra_daemon_class_arg, default):
+    return __get_class(extra_daemon_class_arg, "MFPLUGIN_EXTRA_DAEMON_CLASS",
+                       default)
+
+
 NON_REQUIRED_BOOLEAN = {
     "required": False,
     "type": "boolean",

@@ -8,7 +8,8 @@ from mfplugin.utils import validate_configparser, \
 from mfplugin.app import APP_SCHEMA, App
 from mfplugin.extra_daemon import EXTRA_DAEMON_SCHEMA, ExtraDaemon
 from mfplugin.utils import BadPlugin, resolve, get_current_envs, \
-    PluginEnvContextManager, NON_REQUIRED_BOOLEAN_DEFAULT_TRUE
+    PluginEnvContextManager, NON_REQUIRED_BOOLEAN_DEFAULT_TRUE, \
+    get_app_class, get_extra_daemon_class
 
 
 MFMODULE = os.environ.get("MFMODULE", "GENERIC")
@@ -62,12 +63,13 @@ LOGGER = get_logger("configuration.py")
 class Configuration(object):
 
     def __init__(self, plugin_name, plugin_home, config_filepath=None,
-                 extra_daemon_class=ExtraDaemon,
-                 app_class=App):
+                 extra_daemon_class=None,
+                 app_class=None):
         self.plugin_name = plugin_name
         self.plugin_home = plugin_home
-        self.app_class = app_class
-        self.extra_daemon_class = extra_daemon_class
+        self.app_class = get_app_class(app_class, App)
+        self.extra_daemon_class = get_extra_daemon_class(extra_daemon_class,
+                                                         ExtraDaemon)
         if config_filepath is None:
             self._config_filepath = os.path.join(plugin_home, "config.ini")
         else:
