@@ -12,6 +12,9 @@ def main():
     arg_parser = argparse.ArgumentParser(description=DESCRIPTION)
     arg_parser.add_argument("--plugin-path", default=".",
                             help="plugin directory path")
+    arg_parser.add_argument("--debug", action="store_true",
+                            help="add some debug informations in "
+                            "case of problems")
     arg_parser.add_argument("--show-plugin-path", action="store_true",
                             default=False,
                             help="show the generated plugin path")
@@ -24,7 +27,12 @@ def main():
     except Exception as e:
         echo_nok()
         print(e)
-        sys.exit(1)
+        if args.debug:
+            print("details of the problem:")
+            raise(e)
+        else:
+            print("(note: use 'make releasedebug' for more details)")
+            sys.exit(1)
     echo_ok()
     if args.show_plugin_path:
         echo_bold("plugins is ready at %s" % path)
