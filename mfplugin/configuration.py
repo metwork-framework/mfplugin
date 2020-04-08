@@ -245,14 +245,16 @@ class Configuration(object):
         # FIXME: step mfdata ?
         for section in [x for x in self._doc.keys() if x.startswith("app_")]:
             c = self.app_class
-            command = c(self.plugin_name,
+            command = c(self.plugin_home,
+                        self.plugin_name,
                         section.replace('app_', '', 1),
                         self._doc[section])
             self.add_app(command)
         for section in [x for x in self._doc.keys()
                         if x.startswith("extra_daemon_")]:
             c = self.extra_daemon_class
-            command = c(self.plugin_name,
+            command = c(self.plugin_home,
+                        self.plugin_name,
                         section.replace('extra_daemon_', '', 1),
                         self._doc[section])
             self.add_extra_daemon(command)

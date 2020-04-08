@@ -144,8 +144,8 @@ class Plugin(object):
         # the plugin is installed
         if self.is_dev_linked:
             # this is a devlink
-            self._version = "devlink"
-            self._release = "devlink"
+            self._version = "dev_link"
+            self._release = "dev_link"
             return
         frmt = "%{version}~~~%{release}\\n"
         cmd = get_rpm_cmd(self.plugins_base_dir, '-q',
@@ -206,6 +206,10 @@ class Plugin(object):
             print(res.stdout)
 
     def _load_rpm_infos(self):
+        self._raw_files_output = "DEV_LINK"
+        self._build_host = "unknown"
+        self._build_date = "unknown"
+        self._size = "unknown"
         if self.is_dev_linked:
             self._raw_metadata_output = "DEV_LINK"
             self._raw_files_output = "DEV_LINK"
