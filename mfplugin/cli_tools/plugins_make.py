@@ -31,9 +31,9 @@ def main():
             print("details of the problem:")
             raise(e)
         else:
-            print("(note: use 'make releasedebug' for more details)")
-            sys.exit(1)
-    echo_ok()
+            print("note: use --debug option for more details")
+    else:
+        echo_ok()
     if args.show_plugin_path:
         echo_bold("plugins is ready at %s" % path)
 

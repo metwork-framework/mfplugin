@@ -1,9 +1,10 @@
 import os
+import copy
+import sys
 import fnmatch
 import inspect
 from opinionated_configparser import OpinionatedConfigParser
 from cerberus import Validator
-from mflog import get_logger
 from mfplugin.utils import validate_configparser, \
     cerberus_errors_to_human_string
 from mfplugin.app import APP_SCHEMA, App
@@ -58,7 +59,6 @@ SCHEMA = {
         "schema": {}
     },
 }
-LOGGER = get_logger("configuration.py")
 
 
 class Configuration(object):
@@ -78,7 +78,7 @@ class Configuration(object):
         if not os.path.isfile(self._config_filepath):
             raise BadPlugin("configuration file: %s is missing" %
                             self._config_filepath)
-        self.paths = [
+        paths = [
             self._config_filepath,
             "%s/config/plugins/%s.ini" % (MFMODULE_RUNTIME_HOME,
                                           self.plugin_name),
@@ -87,17 +87,26 @@ class Configuration(object):
             "/etc/metwork.config.d/%s/plugins/%s.ini" %
             (MFMODULE_LOWERCASE, self.plugin_name)
         ]
+        self.paths = [x for x in paths if os.path.isfile(x)]
         self._commands = None
         self._doc = None
         self.__loaded = False
 
     def get_schema(self):
-        return SCHEMA
+        return copy.deepcopy(SCHEMA)
 
-    def get_configuration_env_dict(self, ignore_keys_starting_with=None):
+    def get_configuration_env_dict(self, ignore_keys_starting_with=None,
+                                   limit_to_section=None):
         self.load()
         env_var_dict = {}
-        for section in self._doc.keys():
+        if limit_to_section is None:
+            sections = self._doc.keys()
+        else:
+            if limit_to_section in list(self._doc.keys()):
+                sections = [limit_to_section]
+            else:
+                sections = []
+        for section in sections:
             for option in self._doc[section].keys():
                 if ignore_keys_starting_with and \
                         option.strip().startswith(ignore_keys_starting_with):
@@ -110,22 +119,41 @@ class Configuration(object):
                 env_var_dict[name] = "%s" % val
         return env_var_dict
 
-    def __get_schema(self):
+    def __get_schema(self, parser):
         schema = self.get_schema()
         to_delete = [x for x in schema.keys() if "*" in x or "?" in x]
         for key in to_delete:
             orig = schema[key]
             del schema[key]
-            for section in self._parser.sections():
+            for section in parser.sections():
                 if fnmatch.fnmatch(section, key):
-                    schema[section] = orig.copy()
+                    schema[section] = copy.deepcopy(orig)
         return schema
+
+    def __get_public_schema(self, parser):
+        schema = self.__get_schema(parser)
+        public_schema = {}
+        for section in schema.keys():
+            if section.startswith('_'):
+                continue
+            if 'schema' not in schema['section']:
+                continue
+            public_schema[section] = \
+                {x: y for x, y in schema[section].items() if x != "schema"}
+            public_schema[section]['schema'] = {}
+            for key in schema[section]['schema'].keys():
+                if key.startwith('_'):
+                    continue
+                public_schema[section]['schema'][key] = \
+                    schema[section]['schema'][key]
+        return public_schema
 
     def _get_debug(self):
         self.load()
         res = {x: y for x, y in inspect.getmembers(self)
                if is_jsonable(y) and not x.startswith('_')
                and not x.startswith('raw_')}
+        res["_doc"] = self._doc
         return res
 
     def get_final_document(self, validated_document):
@@ -162,31 +190,56 @@ class Configuration(object):
             # we raise this exception
             raise
         except Exception:
-            print("exception catched during get_final_document(), vdocument:")
-            print(get_nice_dump(vdocument))
-            print("=> reraising")
+            print("exception catched during get_final_document(), vdocument:",
+                  file=sys.stderr)
+            print(get_nice_dump(vdocument), file=sys.stderr)
+            print("=> reraising", file=sys.stderr)
             raise
+
+    def __validate(self, paths, public=False):
+        v = Validator()
+        v.allow_unknown = True
+        v.require_all = True
+        parser = OpinionatedConfigParser()
+        try:
+            parser.read(paths)
+        except Exception:
+            raise BadPlugin("can't read configuration paths: %s" %
+                            ", ".join(paths))
+        if public:
+            schema = self.__get_public_schema(parser)
+        else:
+            schema = self.__get_schema(parser)
+        status = validate_configparser(v, parser, schema)
+        if status is False:
+            return (status, v.errors, None)
+        else:
+            return (True, {}, v.document)
 
     def __load(self):
         if self.__loaded:
             return False
         self.__loaded = True
-        self._parser = OpinionatedConfigParser()
-        self._parser.read(self.paths)
-        v = Validator()
-        v.allow_unknown = True
-        v.require_all = True
-        status = validate_configparser(v, self._parser, self.__get_schema())
+        status, v_errors, v_document = self.__validate([self._config_filepath])
         if status is False:
-            errors = cerberus_errors_to_human_string(v.errors)
-            LOGGER.warning(
-                "bad plugin configuration file for plugin: %s => "
-                "please fix %s/config.ini or corresponding overiddes\n\n%s"
-                % (self.plugin_name, self.plugin_home, errors)
-            )
-            raise BadPlugin("invalid configuration file: %s" %
-                            self._config_filepath)
-        self._doc = self.__get_final_document(v.document)
+            errors = cerberus_errors_to_human_string(v_errors)
+            print("INVALID CONFIGURATION FILE: %s" % self._config_filepath,
+                  file=sys.stderr)
+            print("Error details: %s" % errors, file=sys.stderr)
+            raise BadPlugin(
+                "invalid configuration file: %s" % self._config_filepath)
+        if len(self.paths) > 1:
+            status, v_errors, v_document = self.__validate(self.paths,
+                                                           public=True)
+            if status is False:
+                errors = cerberus_errors_to_human_string(v_errors)
+                candidates = " or ".join(self.paths[1:])
+                print("INVALID CONFIGURATION FILES: %s" % candidates,
+                      file=sys.stderr)
+                print("Error details: %s" % errors, file=sys.stderr)
+                raise BadPlugin(
+                    "invalid configuration, please fix: %s" % candidates)
+        self._doc = self.__get_final_document(v_document)
         self._apps = []
         self._extra_daemons = []
         # FIXME: step mfdata ?

@@ -26,7 +26,6 @@ class PluginEnvContextManager(object):
     def __enter__(self):
         self.__saved_environ = dict(os.environ)
         for key, value in self.__env_dict.items():
-            print(key, value)
             os.environ[key] = value
 
     def __exit__(self, type, value, traceback):
@@ -251,6 +250,13 @@ def to_bool(strng):
         return False
 
 
+def to_int(strng):
+    try:
+        return int(strng)
+    except Exception:
+        return 0
+
+
 def null_to_empty(value):
     if value == "null":
         return ""
@@ -337,7 +343,7 @@ NON_REQUIRED_BOOLEAN_DEFAULT_TRUE = {
 NON_REQUIRED_INTEGER = {
     "required": False,
     "type": "integer",
-    "coerce": int
+    "coerce": (str, to_int)
 }
 NON_REQUIRED_INTEGER_DEFAULT_0 = {
     **NON_REQUIRED_INTEGER,

@@ -36,7 +36,8 @@ def main():
             print("details of the problem:")
             raise(e)
         else:
-            print("(note: use '--debug option' for more details)")
+            print("(note: use 'plugins.check --debug /plugin/path' "
+                  "for more details)")
             sys.exit(1)
     echo_ok()
 
