@@ -126,13 +126,16 @@ def cerberus_errors_to_human_string(v_errors):
     errors = ""
     for section in v_errors.keys():
         for error in v_errors[section]:
+            if errors == "":
+                errors = "\n"
             if type(error) is str:
-                errors = errors + "[section: %s] %s\n" % (section, error)
+                errors = errors + "- [section: %s] %s\n" % (section, error)
                 continue
             for key in error.keys():
                 for error2 in error[key]:
                     errors = errors + \
-                        "[section: %s][key: %s] %s\n" % (section, key, error2)
+                        "- [section: %s][key: %s] %s\n" % (section, key,
+                                                           error2)
     return errors
 
 
@@ -145,7 +148,30 @@ class MFPluginException(BashWrapperException):
 class BadPlugin(MFPluginException):
     """Exception raised when a plugin is badly constructed."""
 
-    pass
+    def __init__(self, msg=None, validation_errors=None,
+                 original_exception=None, **kwargs):
+        if msg is not None:
+            self.message = msg
+        else:
+            self.message = "bad plugin!"
+        if original_exception is not None:
+            MFPluginException.__init__(
+                self,
+                self.message + (": %s" % original_exception),
+                **kwargs)
+        else:
+            MFPluginException.__init__(self, self.message, **kwargs)
+        self.validation_errors = validation_errors
+        self.original_exception = original_exception
+
+    def __repr__(self):
+        if self.validation_errors is None:
+            return MFPluginException.__repr__(self)
+        return "%s exception with message: %s and validation errors: %s" % \
+            (self.__class__.__name__, self.message, self.validation_errors)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class BadPluginConfiguration(BadPlugin):

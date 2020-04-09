@@ -23,9 +23,6 @@ def main():
     parser.add_argument("--empty",
                         action="store_true",
                         help="unload all layers before")
-    parser.add_argument("--do-not-add-plugin-dir-to-python-path",
-                        action="store_true",
-                        help="do not add plugin directory to PYTHONPATH")
     parser.add_argument("--bash-cmds", action="store_true",
                         help="if set don't execute command but output bash "
                         "cmds to be execute in a fresh empty shell"
@@ -43,11 +40,12 @@ def main():
     plugin = args.PLUGIN_NAME
     layer_name = plugin_name_to_layerapi2_label(plugin)
 
-    # we check that the plugins base dir is included in LAYERAPI2_LAYERS_PATH
-    # (useful for custom plugins base dir during hotswapping for example)
     if args.plugins_base_dir is not None:
         plugins_base_dir = args.plugins_base_dir
     else:
+        # we check that the plugins base dir is included in
+        # LAYERAPI2_LAYERS_PATH
+        # (useful for custom plugins base dir during hotswapping for example)
         plugins_base_dir = os.environ.get('MFMODULE_PLUGINS_BASE_DIR', None)
         if plugins_base_dir is not None:
             if plugins_base_dir not in \
@@ -56,23 +54,20 @@ def main():
                     plugins_base_dir + ':' + \
                     os.environ['LAYERAPI2_LAYERS_PATH']
 
-        manager = PluginsManager(plugins_base_dir)
-        try:
-            p = manager.get_plugin(plugin)
-        except NotInstalledPlugin:
-            print("ERROR: the plugin %s does not seem to be "
-                  "installed/available" % plugin, file=sys.stderr)
-            sys.exit(1)
-
-    apdtpp = not args.do_not_add_plugin_dir_to_python_path
+    manager = PluginsManager(plugins_base_dir)
+    try:
+        p = manager.get_plugin(plugin)
+    except NotInstalledPlugin:
+        print("ERROR: the plugin %s does not seem to be "
+              "installed/available" % plugin, file=sys.stderr)
+        sys.exit(1)
 
     if args.bash_cmds:
         print("source /etc/profile")
         print("if test -f %s/.bash_profile; then source %s/.bash_profile; fi" %
               (MFMODULE_RUNTIME_HOME, MFMODULE_RUNTIME_HOME))
         print("source %s/share/interactive_profile" % MFMODULE_HOME)
-        plugin_env = \
-            p.get_plugin_env_dict(add_plugin_dir_to_python_path=apdtpp)
+        plugin_env = p.get_plugin_env_dict()
         for k, v in plugin_env.items():
             print("export %s=%s" % (k, shlex.quote(v)))
         print("layer_load %s >/dev/null" % layer_name)
@@ -80,8 +75,7 @@ def main():
             print("cd %s" % p.home)
         sys.exit(0)
 
-    with manager.plugin_env_context(plugin,
-                                    add_plugin_dir_to_python_path=apdtpp):
+    with p.plugin_env_context():
         lw_args = ["--empty",
                    "--layers=%s" % layer_name]
         if args.cwd:

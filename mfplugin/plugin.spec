@@ -30,5 +30,5 @@ rm -fr %{buildroot}
 /metwork_plugin
 
 {% for EXCLUDE in EXCLUDES %}
-%exclude /metwork_plugin/{{EXCLUDE}}
+%exclude /metwork_plugin/%{name}/{{EXCLUDE}}
 {% endfor %}

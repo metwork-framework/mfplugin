@@ -1,7 +1,6 @@
 import os
 from mfplugin.utils import NON_REQUIRED_INTEGER_DEFAULT_0, to_bool, \
-    NON_REQUIRED_STRING_DEFAULT_EMPTY, NON_REQUIRED_BOOLEAN_DEFAULT_FALSE, \
-    NON_REQUIRED_BOOLEAN_DEFAULT_TRUE
+    NON_REQUIRED_STRING_DEFAULT_EMPTY, NON_REQUIRED_BOOLEAN_DEFAULT_FALSE
 
 __pdoc__ = {
     "coerce_log_split_stdout_sterr": False,
@@ -38,7 +37,6 @@ COMMAND_SCHEMA = {
         "default": "AUTO",
         "coerce": (str, coerce_log_split_multiple_workers),
     },
-    "_add_plugin_dir_to_python_path": NON_REQUIRED_BOOLEAN_DEFAULT_TRUE,
     "numprocesses": NON_REQUIRED_INTEGER_DEFAULT_0,
     "_cmd_and_args": NON_REQUIRED_STRING_DEFAULT_EMPTY,
     "graceful_timeout": NON_REQUIRED_INTEGER_DEFAULT_0,
@@ -109,10 +107,6 @@ class Command(object):
     def debug(self):
         return self._doc_fragment["debug"]
 
-    @property
-    def add_plugin_dir_to_python_path(self):
-        return self._doc_fragment['_add_plugin_dir_to_python_path']
-
     def _get_log_proxy_args(self):
         if self.log_split_multiple_workers and self.numprocesses > 1:
             std_prefix = f"{MFMODULE_RUNTIME_HOME}/log/" \
@@ -133,16 +127,10 @@ class Command(object):
                 "--stderr STDOUT" % (use_locks, std_prefix)
         return res
 
-    def _get_plugin_wrapper_extra_args(self):
-        if not self.add_plugin_dir_to_python_path:
-            return "--do-not-add-plugin-dir-to-python-path"
-        return ""
-
     @property
     def circus_cmd_and_args(self):
-        res = "%s -- plugin_wrapper %s %s -- %s" % \
+        res = "%s -- plugin_wrapper %s -- %s" % \
             (self._get_log_proxy_args(),
-             self._get_plugin_wrapper_extra_args(),
              self.plugin_name,
              self.cmd_and_args)
         res = res.replace("{plugin_name}", self.plugin_name)

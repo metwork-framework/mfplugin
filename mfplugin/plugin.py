@@ -41,7 +41,7 @@ class Plugin(object):
         self.extra_daemon_class = get_extra_daemon_class(extra_daemon_class,
                                                          ExtraDaemon)
         """Extra Daemon class."""
-        self.home = os.path.abspath(os.path.realpath(home))
+        self.home = os.path.abspath(home)
         """Plugin home (absolute and normalized string)."""
         self.plugins_base_dir = plugins_base_dir \
             if plugins_base_dir is not None else get_default_plugins_base_dir()
@@ -70,7 +70,7 @@ class Plugin(object):
 
     def load(self):
         if self.__loaded is True:
-            return False
+            return
         self.__loaded = True
         c = self.configuration_class
         self._configuration = c(
@@ -82,14 +82,12 @@ class Plugin(object):
         self._load_rpm_infos()
         self._load_version_release()
         self._load_release_ignored_files()
-        return True
 
     def load_full(self):
         self.load()
         self.configuration.load()
 
     def get_plugin_env_dict(self, add_current_envs=True,
-                            add_plugin_dir_to_python_path=True,
                             set_tmp_dir=True,
                             fix_layerapi2_layers_path=True):
         lines = []
@@ -117,7 +115,7 @@ class Plugin(object):
         res.update(env_var_dict)
         if add_current_envs:
             res.update(get_current_envs(self.name, self.home))
-        if add_plugin_dir_to_python_path:
+        if self.configuration.add_plugin_dir_to_python_path:
             old_python_path = os.environ.get("PYTHONPATH", None)
             if old_python_path:
                 res["PYTHONPATH"] = self.home + ":" + old_python_path

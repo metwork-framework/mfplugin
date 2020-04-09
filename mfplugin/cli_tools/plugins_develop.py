@@ -43,7 +43,7 @@ def main():
         sys.exit(3)
     except Exception as e:
         echo_nok()
-        print(e)
+        echo_bold(str(e))
         sys.exit(2)
     echo_ok()
     p = manager.get_plugin(args.name)

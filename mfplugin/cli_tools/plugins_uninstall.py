@@ -44,6 +44,7 @@ def main():
         sys.exit(1)
     except Exception as e:
         echo_nok()
+        raise
         print(e)
         sys.exit(2)
     echo_ok()

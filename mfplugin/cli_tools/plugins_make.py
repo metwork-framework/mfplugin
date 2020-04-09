@@ -34,8 +34,8 @@ def main():
             print("note: use --debug option for more details")
     else:
         echo_ok()
-    if args.show_plugin_path:
-        echo_bold("plugins is ready at %s" % path)
+        if args.show_plugin_path:
+            echo_bold("plugins is ready at %s" % path)
 
 
 if __name__ == '__main__':

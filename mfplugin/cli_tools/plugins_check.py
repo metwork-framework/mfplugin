@@ -4,7 +4,7 @@ import argparse
 import sys
 from mfplugin.manager import PluginsManager
 from mfplugin.utils import get_nice_dump
-from mfutil.cli import echo_ok, echo_running, echo_nok
+from mfutil.cli import echo_ok, echo_running, echo_nok, echo_bold
 
 DESCRIPTION = "make a plugin from the current directory"
 
@@ -31,7 +31,7 @@ def main():
             print(get_nice_dump(plugin._get_debug()))
     except Exception as e:
         echo_nok()
-        print(e)
+        echo_bold(str(e))
         if args.debug:
             print("details of the problem:")
             raise(e)

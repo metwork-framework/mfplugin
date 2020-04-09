@@ -129,10 +129,8 @@ class PluginsManager(object):
 
     def _postinstall_plugin(self, plugin):
         if shutil.which("_plugins.postinstall"):
-            return BashWrapper("_plugins.postinstall %s %s %s" %
+            BashWrapperOrRaise("_plugins.postinstall %s %s %s" %
                                (plugin.name, plugin.version, plugin.release))
-        else:
-            return BashWrapper("true")
 
     def _uninstall_plugin(self, name):
         p = self.get_plugin(name)
@@ -173,12 +171,17 @@ class PluginsManager(object):
             p = self.get_plugin(name)
         except NotInstalledPlugin:
             raise CantInstallPlugin("can't install plugin %s" % name)
-        postinstall_status = self._postinstall_plugin(p)
-        if not postinstall_status:
+        try:
+            # check plugin validity (configuration...)
+            p.load_full()
+            # execute postinstall
+            self._postinstall_plugin(p)
+        except Exception:
             try:
                 self._uninstall_plugin(p)
             except Exception:
                 pass
+            raise
 
     def _install_plugin(self, plugin_filepath):
         x = PluginFile(plugin_filepath)
@@ -259,7 +262,7 @@ class PluginsManager(object):
 
     def load(self):
         if self.__loaded:
-            return False
+            return
         self.__loaded = True
         self._plugins = {}
         for directory in glob.glob(os.path.join(self.plugins_base_dir, "*")):
@@ -274,7 +277,6 @@ class PluginsManager(object):
                                "(details: %s)" % (directory, e))
                 continue
             self._plugins[plugin.name] = plugin
-        return True
 
     def load_full(self):
         self.load()

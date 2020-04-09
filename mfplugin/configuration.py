@@ -39,7 +39,7 @@ SCHEMA = {
     "app_*": {
         "required": False,
         "type": "dict",
-        "allow_unknown": True,
+        "allow_unknown": False,
         "schema": {
             **APP_SCHEMA
         },
@@ -47,7 +47,7 @@ SCHEMA = {
     "extra_daemon_*": {
         "required": False,
         "type": "dict",
-        "allow_unknown": True,
+        "allow_unknown": False,
         "schema": {
             **EXTRA_DAEMON_SCHEMA
         },
@@ -198,7 +198,7 @@ class Configuration(object):
 
     def __validate(self, paths, public=False):
         v = Validator()
-        v.allow_unknown = True
+        v.allow_unknown = False
         v.require_all = True
         parser = OpinionatedConfigParser()
         try:
@@ -216,54 +216,52 @@ class Configuration(object):
         else:
             return (True, {}, v.document)
 
-    def __load(self):
-        if self.__loaded:
-            return False
-        self.__loaded = True
-        status, v_errors, v_document = self.__validate([self._config_filepath])
-        if status is False:
-            errors = cerberus_errors_to_human_string(v_errors)
-            print("INVALID CONFIGURATION FILE: %s" % self._config_filepath,
-                  file=sys.stderr)
-            print("Error details: %s" % errors, file=sys.stderr)
-            raise BadPlugin(
-                "invalid configuration file: %s" % self._config_filepath)
-        if len(self.paths) > 1:
-            status, v_errors, v_document = self.__validate(self.paths,
-                                                           public=True)
-            if status is False:
-                errors = cerberus_errors_to_human_string(v_errors)
-                candidates = " or ".join(self.paths[1:])
-                print("INVALID CONFIGURATION FILES: %s" % candidates,
-                      file=sys.stderr)
-                print("Error details: %s" % errors, file=sys.stderr)
-                raise BadPlugin(
-                    "invalid configuration, please fix: %s" % candidates)
-        self._doc = self.__get_final_document(v_document)
-        self._apps = []
-        self._extra_daemons = []
-        # FIXME: step mfdata ?
-        for section in [x for x in self._doc.keys() if x.startswith("app_")]:
-            c = self.app_class
-            command = c(self.plugin_home,
-                        self.plugin_name,
-                        section.replace('app_', '', 1),
-                        self._doc[section])
-            self.add_app(command)
-        for section in [x for x in self._doc.keys()
-                        if x.startswith("extra_daemon_")]:
-            c = self.extra_daemon_class
-            command = c(self.plugin_home,
-                        self.plugin_name,
-                        section.replace('extra_daemon_', '', 1),
-                        self._doc[section])
-            self.add_extra_daemon(command)
-        return True
-
     def load(self):
         with PluginEnvContextManager(get_current_envs(self.plugin_name,
                                                       self.plugin_home)):
-            return self.__load()
+            if self.__loaded:
+                return False
+            self.__loaded = True
+            status, v_errors, v_document = \
+                self.__validate([self._config_filepath])
+            if status is False:
+                errors = cerberus_errors_to_human_string(v_errors)
+                raise BadPlugin(
+                    "invalid configuration file: %s" % self._config_filepath,
+                    validation_errors=errors)
+            if len(self.paths) > 1:
+                status, v_errors, v_document = \
+                    self.__validate(self.paths, public=True)
+                if status is False:
+                    errors = cerberus_errors_to_human_string(v_errors)
+                    candidates = " or ".join(self.paths[1:])
+                    raise BadPlugin(
+                        "invalid configuration, please fix: %s" % candidates,
+                        validation_errors=errors)
+            self._doc = self.__get_final_document(v_document)
+            self._apps = []
+            self._extra_daemons = []
+            # FIXME: step mfdata ?
+            for section in [x for x in self._doc.keys()
+                            if x.startswith("app_")]:
+                c = self.app_class
+                command = c(self.plugin_home,
+                            self.plugin_name,
+                            section.replace('app_', '', 1),
+                            self._doc[section])
+                self.add_app(command)
+            for section in [x for x in self._doc.keys()
+                            if x.startswith("extra_daemon_")]:
+                c = self.extra_daemon_class
+                command = c(self.plugin_home,
+                            self.plugin_name,
+                            section.replace('extra_daemon_', '', 1),
+                            self._doc[section])
+                self.add_extra_daemon(command)
+            self.after_load()
+
+    def after_load(self):
+        pass
 
     def add_app(self, app):
         self.load()
@@ -319,3 +317,8 @@ class Configuration(object):
     def url(self):
         self.load()
         return self._doc['general']['_url']
+
+    @property
+    def add_plugin_dir_to_python_path(self):
+        self.load()
+        return self._doc['general']['_add_plugin_dir_to_python_path']

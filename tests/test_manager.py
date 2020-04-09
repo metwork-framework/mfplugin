@@ -82,7 +82,7 @@ def test_develop_plugin():
     x.develop_plugin(home)
     assert len(x.plugins) == 1
     assert x.plugins["plugin1"].name == "plugin1"
-    assert x.plugins["plugin1"].version == "devlink"
+    assert x.plugins["plugin1"].version == "dev_link"
     assert x.plugins["plugin1"].is_dev_linked
 
 
