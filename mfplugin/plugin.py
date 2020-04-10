@@ -161,7 +161,8 @@ class Plugin(object):
     def _load_format_version(self):
         pfv = os.path.join(self.home, ".plugin_format_version")
         if not os.path.isfile(pfv):
-            raise BadPlugin("%s is missing" % pfv)
+            raise BadPlugin("%s is missing => this is probably an old and "
+                            "incompatible plugin => please migrate it!" % pfv)
         try:
             with open("%s/.plugin_format_version" % self.home, "r") as f:
                 c = f.read().strip()

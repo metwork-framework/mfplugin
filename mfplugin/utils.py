@@ -142,27 +142,32 @@ def cerberus_errors_to_human_string(v_errors):
 class MFPluginException(BashWrapperException):
     """Base mfplugin Exception class."""
 
-    pass
-
-
-class BadPlugin(MFPluginException):
-    """Exception raised when a plugin is badly constructed."""
-
     def __init__(self, msg=None, validation_errors=None,
                  original_exception=None, **kwargs):
         if msg is not None:
             self.message = msg
         else:
-            self.message = "bad plugin!"
+            self.message = "mfplugin exception!"
         if original_exception is not None:
-            MFPluginException.__init__(
+            BashWrapperException.__init__(
                 self,
                 self.message + (": %s" % original_exception),
                 **kwargs)
         else:
-            MFPluginException.__init__(self, self.message, **kwargs)
-        self.validation_errors = validation_errors
+            BashWrapperException.__init__(self, self.message, **kwargs)
         self.original_exception = original_exception
+
+
+class BadPlugin(MFPluginException):
+    """Exception raised when a plugin is badly constructed."""
+
+    def __init__(self, msg=None, validation_errors=None, **kwargs):
+        if msg is not None:
+            self.message = msg
+        else:
+            self.message = "bad plugin!"
+        MFPluginException.__init__(self, self.message, **kwargs)
+        self.validation_errors = validation_errors
 
     def __repr__(self):
         if self.validation_errors is None:

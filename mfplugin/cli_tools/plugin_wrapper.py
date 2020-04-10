@@ -9,10 +9,10 @@ import shlex
 
 DESCRIPTION = "execute a command in a plugin environment"
 
-MFMODULE = os.environ["MFMODULE"]
-MFMODULE_HOME = os.environ["MFMODULE_HOME"]
+MFMODULE = os.environ.get("MFMODULE", "GENERIC")
+MFMODULE_HOME = os.environ.get("MFMODULE_HOME", "/tmp")
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
-MFMODULE_LOWERCASE = os.environ["MFMODULE_LOWERCASE"]
+MFMODULE_LOWERCASE = os.environ.get("MFMODULE_LOWERCASE", "generic")
 
 
 def main():

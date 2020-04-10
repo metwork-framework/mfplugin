@@ -4,7 +4,7 @@ import shutil
 import glob
 from functools import wraps
 from mflog import get_logger
-from mfutil import mkdir_p_or_die, BashWrapperOrRaise, BashWrapper
+from mfutil import mkdir_p_or_die, BashWrapperOrRaise
 from mfutil.layerapi2 import LayerApi2Wrapper
 from mfplugin.plugin import Plugin
 from mfplugin.configuration import Configuration
@@ -122,10 +122,8 @@ class PluginsManager(object):
 
     def _preuninstall_plugin(self, plugin):
         if shutil.which("_plugins.preuninstall"):
-            return BashWrapper("_plugins.preuninstall %s %s %s" %
+            BashWrapperOrRaise("_plugins.preuninstall %s %s %s" %
                                (plugin.name, plugin.version, plugin.release))
-        else:
-            return BashWrapper("true")
 
     def _postinstall_plugin(self, plugin):
         if shutil.which("_plugins.postinstall"):
@@ -134,19 +132,23 @@ class PluginsManager(object):
 
     def _uninstall_plugin(self, name):
         p = self.get_plugin(name)
-        preuninstall_status = self._preuninstall_plugin(p)
-        if not preuninstall_status:
-            raise CantUninstallPlugin("can't uninstall plugin: %s" % name,
-                                      bash_wrapper=preuninstall_status)
+        preuninstall_exception = None
+        try:
+            self._preuninstall_plugin(p)
+        except Exception as e:
+            preuninstall_exception = e
+            # we keep the exception but we want to continue to remove the
+            # plugin
         if p.is_dev_linked:
             os.unlink(p.home)
-            return
-        cmd = get_rpm_cmd(self.plugins_base_dir, '-e --noscripts %s' % name,
-                          add_prefix=False)
-        BashWrapperOrRaise(cmd, CantUninstallPlugin,
-                           "can't uninstall plugin: %s" % name)
-        if p.home:
-            shutil.rmtree(p.home, ignore_errors=True)
+        else:
+            cmd = get_rpm_cmd(self.plugins_base_dir,
+                              '-e --noscripts %s' % name,
+                              add_prefix=False)
+            BashWrapperOrRaise(cmd, CantUninstallPlugin,
+                               "can't uninstall plugin: %s" % name)
+            shutil.rmtree(p.home, ignore_errors=True)  # to be sure
+        self.__loaded = False
         try:
             self.get_plugin(name)
         except NotInstalledPlugin:
@@ -156,6 +158,11 @@ class PluginsManager(object):
         if os.path.exists(p.home):
             raise CantUninstallPlugin("can't uninstall plugin: %s "
                                       "(directory still here)" % name)
+        if preuninstall_exception is not None:
+            raise CantUninstallPlugin(
+                "the plugin is uninstalled but we "
+                "found some problems during preuninstall script",
+                original_exception=preuninstall_exception)
 
     def __before_install_develop(self, name):
         try:
@@ -178,7 +185,7 @@ class PluginsManager(object):
             self._postinstall_plugin(p)
         except Exception:
             try:
-                self._uninstall_plugin(p)
+                self._uninstall_plugin(p.name)
             except Exception:
                 pass
             raise
@@ -192,6 +199,7 @@ class PluginsManager(object):
                           add_prefix=True)
         BashWrapperOrRaise(cmd, CantInstallPlugin,
                            "can't install plugin %s" % x.name)
+        self.__loaded = False
         self.__after_install_develop(x.name)
 
     def _develop_plugin(self, plugin_home):
@@ -202,6 +210,7 @@ class PluginsManager(object):
             os.symlink(p.home, os.path.join(self.plugins_base_dir, p.name))
         except OSError:
             pass
+        self.__loaded = False
         self.__after_install_develop(p.name)
 
     @with_lock
@@ -220,7 +229,6 @@ class PluginsManager(object):
             CantInstallPlugin: if the plugin can't be installed.
 
         """
-        self.__loaded = False
         self._install_plugin(plugin_filepath)
 
     @with_lock
@@ -238,7 +246,6 @@ class PluginsManager(object):
             CantUninstallPlugin: if the plugin can't be uninstalled.
 
         """
-        self.__loaded = False
         self._uninstall_plugin(name)
 
     @with_lock
@@ -257,7 +264,6 @@ class PluginsManager(object):
             CantInstallPlugin: if the plugin can't be installed.
 
         """
-        self.__loaded = False
         self._develop_plugin(plugin_home)
 
     def load(self):

@@ -7,9 +7,11 @@ import json
 from mfplugin.manager import PluginsManager
 from terminaltables import SingleTable
 from mfutil.cli import echo_bold
+from mflog import get_logger
 
 DESCRIPTION = "get the installed plugins list"
 MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')
+LOGGER = get_logger("mfplugin/plugins_list")
 
 
 def main():
@@ -39,21 +41,26 @@ def main():
     table_data = []
     table_data.append(["Name", "Version", "Release", "Home"])
     for plugin in plugins:
-        name = plugin.name
-        release = plugin.release
-        version = plugin.version
-        home = plugin.home
+        try:
+            release = plugin.release
+            version = plugin.version
+        except Exception as e:
+            LOGGER.warning("Bad plugin: (%s, %s) with exception: %s " %
+                           (plugin.name, plugin.home, e))
+            release = "error"
+            version = "error"
         if args.raw:
-            print("%s~~~%s~~~%s~~~%s" % (name, version, release, home))
+            print("%s~~~%s~~~%s~~~%s" % (plugin.name, version, release,
+                                         plugin.home))
         elif args.json:
             json_output.append({
-                "name": name,
+                "name": plugin.name,
                 "release": release,
                 "version": version,
-                "home": home
+                "home": plugin.home
             })
         else:
-            table_data.append([name, version, release, home])
+            table_data.append([plugin.name, version, release, plugin.home])
     if not args.raw and not args.json:
         t = SingleTable(title="Installed plugins (%i)" % len(plugins),
                         table_data=table_data)
