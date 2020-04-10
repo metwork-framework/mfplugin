@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import sys
 from mfplugin.manager import PluginsManager
 from mfutil.cli import echo_ok, echo_running, echo_nok, echo_bold
 
