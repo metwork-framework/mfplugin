@@ -58,8 +58,10 @@ class Command(object):
         self.name = name
         self._type = "command"
 
-    def duplicate(self, new_name):
+    def duplicate(self, new_name=None):
         c = self.__class__
+        if new_name is None:
+            new_name = self.name
         return c(self.plugin_home, self.plugin_name, new_name,
                  dict(self._doc_fragment))
 

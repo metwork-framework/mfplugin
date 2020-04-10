@@ -6,9 +6,8 @@ from mfplugin.utils import get_rpm_cmd, get_default_plugins_base_dir, \
 
 class PluginFile(object):
 
-    def __init__(self, plugin_filepath, plugins_base_dir=None):
-        self.plugins_base_dir = plugins_base_dir \
-            if plugins_base_dir is not None else get_default_plugins_base_dir()
+    def __init__(self, plugin_filepath):
+        self.plugins_base_dir = get_default_plugins_base_dir()
         """Plugins base directory (string)."""
         if not os.path.isfile(plugin_filepath):
             raise BadPluginFile("file: %s not found" % plugin_filepath)

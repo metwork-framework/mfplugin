@@ -17,8 +17,6 @@ def main():
     arg_parser = argparse.ArgumentParser(description=DESCRIPTION)
     arg_parser.add_argument("plugin_filepath", type=str,
                             help="plugin filepath")
-    arg_parser.add_argument("--force", help="ignore some errors",
-                            action="store_true")
     arg_parser.add_argument("--plugins-base-dir", type=str, default=None,
                             help="can be use to set an alternate "
                             "plugins-base-dir, if not set the value of "
@@ -38,8 +36,7 @@ def main():
         sys.exit(3)
     echo_running("- Checking plugin file...")
     try:
-        pf = PluginFile(args.plugin_filepath,
-                        plugins_base_dir=manager.plugins_base_dir)
+        pf = PluginFile(args.plugin_filepath)
         pf.load()
     except BadPluginFile:
         echo_nok()

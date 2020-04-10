@@ -16,8 +16,6 @@ def main():
     arg_parser = argparse.ArgumentParser(description=DESCRIPTION)
     arg_parser.add_argument("name", type=str,
                             help="plugin name")
-    arg_parser.add_argument("--force", help="ignore some errors",
-                            action="store_true")
     arg_parser.add_argument("--plugins-base-dir", type=str, default=None,
                             help="can be use to set an alternate "
                             "plugins-base-dir, if not set the value of "

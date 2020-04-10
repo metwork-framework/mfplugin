@@ -104,6 +104,42 @@ def layerapi2_label_file_to_plugin_name(llf_path):
     return layerapi2_label_to_plugin_name(c)
 
 
+def layerapi2_label_to_plugin_home(plugins_base_dir, label):
+    """Find the plugin home corresponding to the given layerapi2 label.
+
+    We search in plugins_base_dir for a directory (not recursively) with
+    the corresponding label value.
+
+    If we found nothing, None is returned.
+
+    Args:
+        plugins_base_dir (string): plugins base dir to search.
+        label (string): the label to search.
+
+    Returns:
+        (string): plugin home (absolute directory path) or None.
+
+    """
+    for d in os.listdir(plugins_base_dir):
+        if d == "base":
+            continue
+        fd = os.path.abspath(os.path.join(plugins_base_dir, d))
+        if not os.path.isdir(fd):
+            continue
+        llf = os.path.join(fd, ".layerapi2_label")
+        if not os.path.isfile(llf):
+            continue
+        try:
+            with open(llf, 'r') as f:
+                c = f.read().strip()
+        except Exception:
+            continue
+        if c == label:
+            return fd
+    # not found
+    return None
+
+
 def inside_a_plugin_env():
     """Return True if we are inside a plugin_env.
 

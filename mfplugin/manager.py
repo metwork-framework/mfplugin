@@ -5,7 +5,6 @@ import glob
 from functools import wraps
 from mflog import get_logger
 from mfutil import mkdir_p_or_die, BashWrapperOrRaise
-from mfutil.layerapi2 import LayerApi2Wrapper
 from mfplugin.plugin import Plugin
 from mfplugin.configuration import Configuration
 from mfplugin.app import App
@@ -16,13 +15,12 @@ from mfplugin.utils import get_default_plugins_base_dir, \
     NotInstalledPlugin, AlreadyInstalledPlugin, CantInstallPlugin, \
     CantUninstallPlugin, PluginsBaseNotInitialized, \
     _touch_conf_monitor_control_file, get_plugin_lock_path, \
-    get_extra_daemon_class, get_app_class, get_configuration_class
+    get_extra_daemon_class, get_app_class, get_configuration_class, \
+    layerapi2_label_to_plugin_home, PluginEnvContextManager
 
 __pdoc__ = {
     "with_base_initialized": False,
-    "with_layerapi2_path": False,
-    "with_lock": False,
-    "PluginEnvContextManager": False
+    "with_lock": False
 }
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
 LOGGER = get_logger("mfplugin.manager")
@@ -34,18 +32,6 @@ def with_base_initialized(f):
         if not self.initialized:
             raise PluginsBaseNotInitialized("plugins base not initialized")
         return f(self, *args, **kwargs)
-    return wrapper
-
-
-def with_layerapi2_path(f):
-    @wraps(f)
-    def wrapper(self, *args, **kwargs):
-        old_mlp = os.environ.get('LAYERAPI2_LAYERS_PATH', '')
-        os.environ['LAYERAPI2_LAYERS_PATH'] = \
-            self.plugins_base_dir + ":" + old_mlp
-        res = f(self, *args, **kwargs)
-        os.environ['LAYERAPI2_LAYERS_PATH'] = old_mlp
-        return res
     return wrapper
 
 
@@ -99,7 +85,6 @@ class PluginsManager(object):
         self.initialized = True
 
     @with_base_initialized
-    @with_layerapi2_path
     def make_plugin(self, plugin_home):
         return Plugin(self.plugins_base_dir, plugin_home,
                       configuration_class=self.configuration_class,
@@ -107,28 +92,38 @@ class PluginsManager(object):
                       extra_daemon_class=self.extra_daemon_class)
 
     @with_base_initialized
-    @with_layerapi2_path
     def get_plugin(self, name):
         label = plugin_name_to_layerapi2_label(name)
-        home = LayerApi2Wrapper.get_layer_home(label)
+        home = layerapi2_label_to_plugin_home(self.plugins_base_dir, label)
         if home is None:
             raise NotInstalledPlugin("plugin: %s not installed" % name)
         return self.make_plugin(home)
 
     @with_base_initialized
-    @with_layerapi2_path
     def plugin_env_context(self, name, **kwargs):
         return self.plugins[name].plugin_env_context(**kwargs)
 
     def _preuninstall_plugin(self, plugin):
         if shutil.which("_plugins.preuninstall"):
-            BashWrapperOrRaise("_plugins.preuninstall %s %s %s" %
-                               (plugin.name, plugin.version, plugin.release))
+            env_context = {
+                "MFMODULE_PLUGINS_BASE_DIR": self.plugins_base_dir
+            }
+            # FIXME: should be python methods and not shell
+            with PluginEnvContextManager(env_context):
+                BashWrapperOrRaise(
+                    "_plugins.preuninstall %s %s %s" %
+                    (plugin.name, plugin.version, plugin.release))
 
     def _postinstall_plugin(self, plugin):
         if shutil.which("_plugins.postinstall"):
-            BashWrapperOrRaise("_plugins.postinstall %s %s %s" %
-                               (plugin.name, plugin.version, plugin.release))
+            env_context = {
+                "MFMODULE_PLUGINS_BASE_DIR": self.plugins_base_dir
+            }
+            # FIXME: should be python methods and not shell
+            with PluginEnvContextManager(env_context):
+                BashWrapperOrRaise(
+                    "_plugins.postinstall %s %s %s" %
+                    (plugin.name, plugin.version, plugin.release))
 
     def _uninstall_plugin(self, name):
         p = self.get_plugin(name)
@@ -166,10 +161,11 @@ class PluginsManager(object):
 
     def __before_install_develop(self, name):
         try:
-            self.get_plugin(name)
+            print(self.get_plugin(name))
         except NotInstalledPlugin:
             pass
         else:
+            print("merde")
             raise AlreadyInstalledPlugin("plugin: %s is already installed" %
                                          name)
 
@@ -215,7 +211,6 @@ class PluginsManager(object):
 
     @with_lock
     @with_base_initialized
-    @with_layerapi2_path
     def install_plugin(self, plugin_filepath):
         """Install a plugin from a .plugin file.
 
@@ -233,7 +228,6 @@ class PluginsManager(object):
 
     @with_lock
     @with_base_initialized
-    @with_layerapi2_path
     def uninstall_plugin(self, name):
         """Uninstall a plugin.
 
@@ -250,7 +244,6 @@ class PluginsManager(object):
 
     @with_lock
     @with_base_initialized
-    @with_layerapi2_path
     def develop_plugin(self, plugin_home):
         """Install a plugin in development mode.
 

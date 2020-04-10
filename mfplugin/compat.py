@@ -73,8 +73,7 @@ def get_plugin_info(name_or_filepath, mode="auto", plugins_base_dir=None):
             if os.path.isfile(name_or_filepath):
                 mode = "file"
     if mode == "file":
-        plugin = PluginFile(name_or_filepath,
-                            plugins_base_dir=plugins_base_dir)
+        plugin = PluginFile(name_or_filepath)
     elif mode == "name":
         manager = PluginsManager(plugins_base_dir)
         try:

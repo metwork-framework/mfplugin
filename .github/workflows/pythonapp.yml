@@ -23,7 +23,6 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get install rpm
-        sudo wget -O /usr/lib/x86_64-linux-gnu/liblayerapi2.so "https://metwork-framework.org/pub/misc/mfutil_c/liblayerapi2.so"
         sudo wget -O /usr/lib/x86_64-linux-gnu/libmfutil.so "https://metwork-framework.org/pub/misc/mfutil_c/libmfutil.so"
     - name: Install dev dependencies
       run: |

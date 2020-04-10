@@ -8,7 +8,6 @@ from gitignore_parser import parse_gitignore
 from mflog import get_logger
 from mfutil import BashWrapper, get_unique_hexa_identifier, mkdir_p_or_die, \
     BashWrapperOrRaise, mkdir_p
-from mfutil.layerapi2 import LayerApi2Wrapper
 from mfplugin.configuration import Configuration
 from mfplugin.app import App
 from mfplugin.extra_daemon import ExtraDaemon
@@ -16,7 +15,7 @@ from mfplugin.utils import BadPlugin, get_default_plugins_base_dir, \
     get_rpm_cmd, layerapi2_label_file_to_plugin_name, validate_plugin_name, \
     CantBuildPlugin, get_current_envs, PluginEnvContextManager, \
     get_configuration_class, get_app_class, get_extra_daemon_class, \
-    is_jsonable
+    is_jsonable, layerapi2_label_to_plugin_home, plugin_name_to_layerapi2_label
 
 LOGGER = get_logger("mfplugin.py")
 MFEXT_HOME = os.environ.get("MFEXT_HOME", None)
@@ -56,6 +55,7 @@ class Plugin(object):
 
     def _get_debug(self):
         self.load()
+        self._load_release_ignored_files()
         res = {x: y for x, y in inspect.getmembers(self)
                if is_jsonable(y) and not x.startswith('_')
                and not x.startswith('raw_')}
@@ -78,18 +78,17 @@ class Plugin(object):
             app_class=self.app_class,
             extra_daemon_class=self.extra_daemon_class
         )
+        self._layerapi2_layer_name = plugin_name_to_layerapi2_label(self.name)
         self._load_format_version()
         self._load_rpm_infos()
         self._load_version_release()
-        self._load_release_ignored_files()
 
     def load_full(self):
         self.load()
         self.configuration.load()
 
     def get_plugin_env_dict(self, add_current_envs=True,
-                            set_tmp_dir=True,
-                            fix_layerapi2_layers_path=True):
+                            set_tmp_dir=True):
         lines = []
         res = {}
         try:
@@ -103,7 +102,10 @@ class Plugin(object):
             if tmp.startswith('-'):
                 tmp = tmp[1:]
             if tmp.startswith("plugin_"):
-                home = LayerApi2Wrapper.get_layer_home(tmp)
+                home = layerapi2_label_to_plugin_home(self.plugins_base_dir,
+                                                      tmp)
+                if home is None:
+                    continue
                 try:
                     p = Plugin(self.plugins_base_dir, home)
                     p.load()
@@ -125,9 +127,6 @@ class Plugin(object):
             tmpdir = os.path.join(MFMODULE_RUNTIME_HOME, "tmp", self.name)
             if mkdir_p(tmpdir, nodebug=True, nowarning=True):
                 res["TMPDIR"] = tmpdir
-        if fix_layerapi2_layers_path:
-            tmp = os.environ.get("LAYERAPI2_LAYERS_PATH", "").split(":")
-            res["LAYERAPI2_LAYERS_PATH"] = ":".join([self.home] + tmp)
         return res
 
     def plugin_env_context(self, **kwargs):
@@ -181,6 +180,7 @@ class Plugin(object):
         self._format_version = res[0:3]
 
     def _load_release_ignored_files(self):
+        # not included in load() method for perf reasons
         self._release_ignored_files = []
         ignore_filepath = os.path.join(self.home, ".releaseignore")
         if os.path.isfile(ignore_filepath):
@@ -192,6 +192,9 @@ class Plugin(object):
                             os.path.relpath(os.path.join(r, flder),
                                             start=self.home)
                         )
+                        # we remove the directory from walking
+                        # https://stackoverflow.com/a/19859907/433050
+                        d.remove(flder)
                 for fle in f:
                     if matches(os.path.join(self.home, r, fle)):
                         self._release_ignored_files.append(
@@ -305,6 +308,11 @@ class Plugin(object):
         return self._configuration
 
     @property
+    def layerapi2_layer_name(self):
+        self.load()
+        return self._layerapi2_layer_name
+
+    @property
     def format_version(self):
         self.load()
         return self._format_version
@@ -342,6 +350,7 @@ class Plugin(object):
     @property
     def release_ignored_files(self):
         self.load()
+        self._load_release_ignored_files()
         return self._release_ignored_files
 
     @property
