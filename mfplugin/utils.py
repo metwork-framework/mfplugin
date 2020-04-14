@@ -397,7 +397,7 @@ def get_nice_dump(val):
 NON_REQUIRED_BOOLEAN = {
     "required": False,
     "type": "boolean",
-    "coerce": (str, to_bool)
+    "coerce": to_bool
 }
 NON_REQUIRED_BOOLEAN_DEFAULT_FALSE = {
     **NON_REQUIRED_BOOLEAN,
@@ -410,7 +410,7 @@ NON_REQUIRED_BOOLEAN_DEFAULT_TRUE = {
 NON_REQUIRED_INTEGER = {
     "required": False,
     "type": "integer",
-    "coerce": (str, to_int)
+    "coerce": to_int
 }
 NON_REQUIRED_INTEGER_DEFAULT_0 = {
     **NON_REQUIRED_INTEGER,
@@ -419,7 +419,7 @@ NON_REQUIRED_INTEGER_DEFAULT_0 = {
 NON_REQUIRED_STRING = {
     "required": False,
     "type": "string",
-    "coerce": (str, null_to_empty),
+    "coerce": null_to_empty,
     "default": ""
 }
 NON_REQUIRED_STRING_DEFAULT_EMPTY = {
