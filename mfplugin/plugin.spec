@@ -19,8 +19,8 @@ Prefix: /metwork_plugin
 
 %install
 rm -rf %{buildroot}
-mkdir -p %{buildroot}/metwork_plugin/%{name}/ 2>/dev/null
-cp -RTvf %{pwd} %{buildroot}/metwork_plugin/%{name}
+mkdir -p %{buildroot}/metwork_plugin/ 2>/dev/null
+cp -RTvf %{pwd} %{buildroot}/metwork_plugin
 
 %clean
 rm -fr %{buildroot}
@@ -30,5 +30,5 @@ rm -fr %{buildroot}
 /metwork_plugin
 
 {% for EXCLUDE in EXCLUDES %}
-%exclude /metwork_plugin/%{name}/{{EXCLUDE}}
+%exclude /metwork_plugin/{{EXCLUDE}}
 {% endfor %}

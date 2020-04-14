@@ -57,6 +57,15 @@ class PluginFile(object):
             raise Exception(x)
         self._raw_files_output = x.stdout
         self._files = [x.strip() for x in x.stdout.split('\n')]
+        found = False
+        for f in self._files:
+            if "/.plugin_format_version" in f:
+                found = True
+                break
+        if not found:
+            raise BadPluginFile("This plugin file is too old => you have to "
+                                "rebuild it with a more recent MetWork "
+                                "version")
 
     @property
     def name(self):

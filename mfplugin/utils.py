@@ -3,7 +3,7 @@ import os
 import json
 import importlib
 from mfutil import BashWrapperException, BashWrapper, get_ipv4_for_hostname, \
-    mkdir_p_or_die
+    mkdir_p_or_die, BashWrapperOrRaise
 
 __pdoc__ = {
     "PluginEnvContextManager": False
@@ -269,15 +269,15 @@ class PluginsBaseNotInitialized(MFPluginException):
     pass
 
 
-def get_rpm_cmd(plugins_base_dir, command, extra_args="", add_prefix=False):
+def get_rpm_cmd(plugins_base_dir, command, extra_args="", prefix=None):
     base = os.path.join(plugins_base_dir, "base")
     if UNDER_METWORK_ENV:
         before = 'layer_wrapper --layers=rpm@mfext -- '
     else:
         before = ''
-    if add_prefix:
+    if prefix is not None:
         cmd = 'rpm %s --dbpath %s --prefix %s %s' % \
-            (command, base, plugins_base_dir, extra_args)
+            (command, base, prefix, extra_args)
     else:
         cmd = 'rpm %s --dbpath %s %s' % \
             (command, base, extra_args)

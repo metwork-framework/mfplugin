@@ -138,8 +138,7 @@ class PluginsManager(object):
             os.unlink(p.home)
         else:
             cmd = get_rpm_cmd(self.plugins_base_dir,
-                              '-e --noscripts %s' % name,
-                              add_prefix=False)
+                              '-e --noscripts %s' % name)
             BashWrapperOrRaise(cmd, CantUninstallPlugin,
                                "can't uninstall plugin: %s" % name)
             shutil.rmtree(p.home, ignore_errors=True)  # to be sure
@@ -161,11 +160,10 @@ class PluginsManager(object):
 
     def __before_install_develop(self, name):
         try:
-            print(self.get_plugin(name))
+            self.get_plugin(name)
         except NotInstalledPlugin:
             pass
         else:
-            print("merde")
             raise AlreadyInstalledPlugin("plugin: %s is already installed" %
                                          name)
 
@@ -186,17 +184,28 @@ class PluginsManager(object):
                 pass
             raise
 
-    def _install_plugin(self, plugin_filepath):
+    def _install_plugin(self, plugin_filepath, new_name=None):
         x = PluginFile(plugin_filepath)
         x.load()
-        self.__before_install_develop(x.name)
+        self.__before_install_develop(new_name if new_name is not None
+                                      else x.name)
+        if new_name is not None:
+            name = new_name
+        else:
+            name = x.name
         cmd = get_rpm_cmd(self.plugins_base_dir,
                           '-Uvh --noscripts --force %s' % plugin_filepath,
-                          add_prefix=True)
+                          prefix=os.path.join(self.plugins_base_dir, name))
         BashWrapperOrRaise(cmd, CantInstallPlugin,
                            "can't install plugin %s" % x.name)
+        if new_name:
+            lalpath = os.path.join(self.plugins_base_dir, name,
+                                   ".layerapi2_label")
+            with open(lalpath, "w") as f:
+                f.write(plugin_name_to_layerapi2_label(new_name) + "\n")
         self.__loaded = False
-        self.__after_install_develop(x.name)
+        self.__after_install_develop(new_name if new_name is not None
+                                     else x.name)
 
     def _develop_plugin(self, plugin_home):
         p = self.make_plugin(plugin_home)
@@ -211,11 +220,12 @@ class PluginsManager(object):
 
     @with_lock
     @with_base_initialized
-    def install_plugin(self, plugin_filepath):
+    def install_plugin(self, plugin_filepath, new_name=None):
         """Install a plugin from a .plugin file.
 
         Args:
             plugin_filepath (string): the plugin file path.
+            new_name (string): alternate plugin name if specified.
 
         Raises:
             PluginsBaseNotInitialized: if the plugins base is not initialized.
@@ -224,7 +234,7 @@ class PluginsManager(object):
             CantInstallPlugin: if the plugin can't be installed.
 
         """
-        self._install_plugin(plugin_filepath)
+        self._install_plugin(plugin_filepath, new_name=new_name)
 
     @with_lock
     @with_base_initialized
