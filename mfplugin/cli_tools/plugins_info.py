@@ -4,7 +4,8 @@ from __future__ import print_function
 import os
 import argparse
 import sys
-from mfplugin.utils import PluginsBaseNotInitialized
+import textwrap
+from terminaltables import SingleTable
 from mfplugin.compat import get_plugin_info
 
 DESCRIPTION = "get some information about a plugin"
@@ -25,18 +26,8 @@ def main():
                             "hardcoded standard value).")
     args = arg_parser.parse_args()
 
-    try:
-        infos = get_plugin_info(args.name_or_filepath,
-                                plugins_base_dir=args.plugins_base_dir)
-    except PluginsBaseNotInitialized:
-        print("ERROR: the module is not initialized", file=sys.stderr)
-        print("       => start it once before installing your plugin",
-              file=sys.stderr)
-        print("", file=sys.stderr)
-        print("hint: you can use %s.start to do that" % MFMODULE_LOWERCASE,
-              file=sys.stderr)
-        print("", file=sys.stderr)
-        sys.exit(3)
+    infos = get_plugin_info(args.name_or_filepath,
+                            plugins_base_dir=args.plugins_base_dir)
 
     if infos is None:
         sys.exit(1)
@@ -44,16 +35,22 @@ def main():
         print(infos['home'])
         sys.exit(0)
 
-    print("Metadata:")
+    table_data = []
+    for title, key in [("Name", "name"), ("Version", "version"),
+                       ("Release", "release"), ("Summary", "summary"),
+                       ("Size", "size"),
+                       ("Build Host", "build_host"),
+                       ("Build Date", "build_date"),
+                       ("License", "license"), ("Maintainer", "packager"),
+                       ("Vendor", "vendor"), ("URL", "url")]:
+        table_data.append((title, textwrap.fill(infos['metadatas'][key], 60)))
+    t = SingleTable(table_data=table_data)
+    t.inner_heading_row_border = False
+    print(t.table)
     print()
-    print(infos['raw_metadata_output'])
-    print()
-    if "home" in infos:
-        print("Installation home: %s" % infos['home'])
-        print()
-    print("List of files:")
-    print()
-    print(infos['raw_files_output'])
+    print("Files:")
+    for f in infos['files']:
+        print("- %s" % f)
 
 
 if __name__ == '__main__':

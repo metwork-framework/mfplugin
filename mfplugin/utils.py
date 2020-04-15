@@ -3,7 +3,7 @@ import os
 import json
 import importlib
 from mfutil import BashWrapperException, BashWrapper, get_ipv4_for_hostname, \
-    mkdir_p_or_die, BashWrapperOrRaise
+    mkdir_p_or_die
 
 __pdoc__ = {
     "PluginEnvContextManager": False
@@ -12,7 +12,6 @@ MFMODULE = os.environ.get('MFMODULE', 'GENERIC')
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
 MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')
 PLUGIN_NAME_REGEXP = "^[A-Za-z0-9_-]+$"
-UNDER_METWORK_ENV = 'MFCONFIG' in os.environ
 
 
 class PluginEnvContextManager(object):
@@ -261,27 +260,6 @@ class BadPluginFile(MFPluginException):
     """Exception raised when a plugin file is bad."""
 
     pass
-
-
-class PluginsBaseNotInitialized(MFPluginException):
-    """Exception raised when the plugins base is not initialized."""
-
-    pass
-
-
-def get_rpm_cmd(plugins_base_dir, command, extra_args="", prefix=None):
-    base = os.path.join(plugins_base_dir, "base")
-    if UNDER_METWORK_ENV:
-        before = 'layer_wrapper --layers=rpm@mfext -- '
-    else:
-        before = ''
-    if prefix is not None:
-        cmd = 'rpm %s --dbpath %s --prefix %s %s' % \
-            (command, base, prefix, extra_args)
-    else:
-        cmd = 'rpm %s --dbpath %s %s' % \
-            (command, base, extra_args)
-    return before + cmd
 
 
 def get_default_plugins_base_dir():

@@ -22,13 +22,6 @@ def main():
                             help="plugin name")
     args = arg_parser.parse_args()
     manager = PluginsManager()
-    if not manager.initialized:
-        echo_bold("ERROR: the module is not initialized")
-        echo_bold("       => start it once before installing your plugin")
-        print()
-        print("hint: you can use %s.start to do that" % MFMODULE_LOWERCASE)
-        print()
-        sys.exit(3)
     echo_running("- Devlinking plugin %s..." % args.name)
     try:
         manager.develop_plugin(args.plugin_path)

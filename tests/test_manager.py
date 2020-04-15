@@ -10,12 +10,7 @@ CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 @with_empty_base
 def test_manager1():
     x = PluginsManager(plugins_base_dir=BASE)
-    assert not x.initialized
-    x.initialize_plugins_base()
-    assert x.initialized
-    y = PluginsManager(plugins_base_dir=BASE)
-    assert y.initialized
-    assert [x for x in y.plugins.items()] == []
+    assert list(x.plugins.items()) == []
 
 
 def test_manage_with_empty_base():
@@ -45,7 +40,6 @@ def _install_two_plugin(x):
 @with_empty_base
 def test_install_plugin():
     x = PluginsManager(plugins_base_dir=BASE)
-    x.initialize_plugins_base()
     _install_two_plugin(x)
     x.plugins["plugin1"].load_full()
     assert int(x.plugins["plugin1"].size) > 0
@@ -59,7 +53,6 @@ def test_install_plugin():
 @with_empty_base
 def test_compat():
     x = PluginsManager(plugins_base_dir=BASE)
-    x.initialize_plugins_base()
     _install_two_plugin(x)
     tmp = get_installed_plugins(plugins_base_dir=BASE)
     assert len(tmp) == 2
@@ -77,7 +70,6 @@ def test_compat():
 @with_empty_base
 def test_develop_plugin():
     x = PluginsManager(plugins_base_dir=BASE)
-    x.initialize_plugins_base()
     home = os.path.join(CURRENT_DIR, "data", "plugin1")
     x.develop_plugin(home)
     assert len(x.plugins) == 1
@@ -89,7 +81,6 @@ def test_develop_plugin():
 @with_empty_base
 def test_uninstall_plugin():
     x = PluginsManager(plugins_base_dir=BASE)
-    x.initialize_plugins_base()
     _install_two_plugin(x)
     x.uninstall_plugin("plugin1")
     assert len(x.plugins) == 1
@@ -99,7 +90,6 @@ def test_uninstall_plugin():
 @with_empty_base
 def test_get_plugin_env_dict():
     x = PluginsManager(plugins_base_dir=BASE)
-    x.initialize_plugins_base()
     _install_two_plugin(x)
     e = x.plugins["plugin1"].get_plugin_env_dict()
     assert e["GENERIC_CURRENT_PLUGIN_NAME"] == "plugin1"
@@ -109,7 +99,6 @@ def test_get_plugin_env_dict():
 @with_empty_base
 def test_plugin_env_context():
     x = PluginsManager(plugins_base_dir=BASE)
-    x.initialize_plugins_base()
     _install_two_plugin(x)
     assert "GENERIC_PLUGIN_PLUGIN1_CUSTOM_FOO" not in os.environ
     assert "GENERIC_CURRENT_PLUGIN_NAME" not in os.environ

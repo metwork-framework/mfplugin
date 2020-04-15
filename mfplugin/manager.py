@@ -1,4 +1,5 @@
 import os
+import tarfile
 import filelock
 import shutil
 import glob
@@ -11,28 +12,18 @@ from mfplugin.app import App
 from mfplugin.extra_daemon import ExtraDaemon
 from mfplugin.file import PluginFile
 from mfplugin.utils import get_default_plugins_base_dir, \
-    get_rpm_cmd, BadPlugin, plugin_name_to_layerapi2_label, \
+    BadPlugin, plugin_name_to_layerapi2_label, \
     NotInstalledPlugin, AlreadyInstalledPlugin, CantInstallPlugin, \
-    CantUninstallPlugin, PluginsBaseNotInitialized, \
+    CantUninstallPlugin, \
     _touch_conf_monitor_control_file, get_plugin_lock_path, \
     get_extra_daemon_class, get_app_class, get_configuration_class, \
     layerapi2_label_to_plugin_home, PluginEnvContextManager
 
 __pdoc__ = {
-    "with_base_initialized": False,
     "with_lock": False
 }
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
 LOGGER = get_logger("mfplugin.manager")
-
-
-def with_base_initialized(f):
-    @wraps(f)
-    def wrapper(self, *args, **kwargs):
-        if not self.initialized:
-            raise PluginsBaseNotInitialized("plugins base not initialized")
-        return f(self, *args, **kwargs)
-    return wrapper
 
 
 def with_lock(f):
@@ -69,29 +60,16 @@ class PluginsManager(object):
         self.plugins_base_dir = plugins_base_dir \
             if plugins_base_dir is not None else get_default_plugins_base_dir()
         """Plugin base directory (string)."""
-        self.initialized = \
-            os.path.isdir(os.path.join(self.plugins_base_dir, "base"))
-        """Is the plugin base directory initialized? (boolean)."""
+        if not os.path.isdir(self.plugins_base_dir):
+            mkdir_p_or_die(self.plugins_base_dir)
         self.__loaded = False
 
-    @with_lock
-    def initialize_plugins_base(self):
-        shutil.rmtree(self.plugins_base_dir, ignore_errors=True)
-        mkdir_p_or_die(self.plugins_base_dir)
-        mkdir_p_or_die(os.path.join(self.plugins_base_dir, "base"))
-        cmd = get_rpm_cmd(self.plugins_base_dir, "--initdb")
-        BashWrapperOrRaise(cmd, Exception, "can't init plugins base: %s" %
-                           self.plugins_base_dir)
-        self.initialized = True
-
-    @with_base_initialized
     def make_plugin(self, plugin_home):
         return Plugin(self.plugins_base_dir, plugin_home,
                       configuration_class=self.configuration_class,
                       app_class=self.app_class,
                       extra_daemon_class=self.extra_daemon_class)
 
-    @with_base_initialized
     def get_plugin(self, name):
         label = plugin_name_to_layerapi2_label(name)
         home = layerapi2_label_to_plugin_home(self.plugins_base_dir, label)
@@ -99,7 +77,6 @@ class PluginsManager(object):
             raise NotInstalledPlugin("plugin: %s not installed" % name)
         return self.make_plugin(home)
 
-    @with_base_initialized
     def plugin_env_context(self, name, **kwargs):
         return self.plugins[name].plugin_env_context(**kwargs)
 
@@ -137,11 +114,7 @@ class PluginsManager(object):
         if p.is_dev_linked:
             os.unlink(p.home)
         else:
-            cmd = get_rpm_cmd(self.plugins_base_dir,
-                              '-e --noscripts %s' % name)
-            BashWrapperOrRaise(cmd, CantUninstallPlugin,
-                               "can't uninstall plugin: %s" % name)
-            shutil.rmtree(p.home, ignore_errors=True)  # to be sure
+            shutil.rmtree(p.home, ignore_errors=True)
         self.__loaded = False
         try:
             self.get_plugin(name)
@@ -193,11 +166,14 @@ class PluginsManager(object):
             name = new_name
         else:
             name = x.name
-        cmd = get_rpm_cmd(self.plugins_base_dir,
-                          '-Uvh --noscripts --force %s' % plugin_filepath,
-                          prefix=os.path.join(self.plugins_base_dir, name))
-        BashWrapperOrRaise(cmd, CantInstallPlugin,
-                           "can't install plugin %s" % x.name)
+        try:
+            tf = tarfile.open(plugin_filepath, "r")
+            tf.extractall(self.plugins_base_dir)
+            os.rename(os.path.join(self.plugins_base_dir, "metwork_plugin"),
+                      os.path.join(self.plugins_base_dir, name))
+        except Exception as e:
+            raise CantInstallPlugin("can't install plugin %s" % x.name,
+                                    original_exception=e)
         if new_name:
             lalpath = os.path.join(self.plugins_base_dir, name,
                                    ".layerapi2_label")
@@ -219,7 +195,6 @@ class PluginsManager(object):
         self.__after_install_develop(p.name)
 
     @with_lock
-    @with_base_initialized
     def install_plugin(self, plugin_filepath, new_name=None):
         """Install a plugin from a .plugin file.
 
@@ -228,7 +203,6 @@ class PluginsManager(object):
             new_name (string): alternate plugin name if specified.
 
         Raises:
-            PluginsBaseNotInitialized: if the plugins base is not initialized.
             BadPluginFile: if the .plugin file is not found or a bad one.
             AlreadyInstalledPlugin: if the plugin is already installed.
             CantInstallPlugin: if the plugin can't be installed.
@@ -237,7 +211,6 @@ class PluginsManager(object):
         self._install_plugin(plugin_filepath, new_name=new_name)
 
     @with_lock
-    @with_base_initialized
     def uninstall_plugin(self, name):
         """Uninstall a plugin.
 
@@ -245,7 +218,6 @@ class PluginsManager(object):
             name (string): the plugin name to uninstall.
 
         Raises:
-            PluginsBaseNotInitialized: if the plugins base is not initialized.
             NotInstalledPlugin: if the plugin is not installed
             CantUninstallPlugin: if the plugin can't be uninstalled.
 
@@ -253,7 +225,6 @@ class PluginsManager(object):
         self._uninstall_plugin(name)
 
     @with_lock
-    @with_base_initialized
     def develop_plugin(self, plugin_home):
         """Install a plugin in development mode.
 
@@ -261,7 +232,6 @@ class PluginsManager(object):
             plugin_path (string): the plugin path to install.
 
         Raises:
-            PluginsBaseNotInitialized: if the plugins base is not initialized.
             AlreadyInstalledPlugin: if the plugin is already installed.
             BadPlugin: if the provided plugin is bad.
             CantInstallPlugin: if the plugin can't be installed.

@@ -60,7 +60,6 @@ def get_plugin_info(name_or_filepath, mode="auto", plugins_base_dir=None):
             plugin is not installed (name mode).
 
     Raises:
-        FIXME: if the plugins base is not initialized.
         NotInstalledPlugin: is the plugin is not installed (if it is a "name").
 
     """
@@ -83,8 +82,6 @@ def get_plugin_info(name_or_filepath, mode="auto", plugins_base_dir=None):
     else:
         raise Exception("unknown mode: %s" % mode)
     res = {
-        "raw_metadata_output": plugin.raw_metadata_output,
-        "raw_files_output": plugin.raw_files_output,
         "files": plugin.files,
         "home": plugin.home
     }
@@ -96,6 +93,22 @@ def get_plugin_info(name_or_filepath, mode="auto", plugins_base_dir=None):
         "build_host": plugin.build_host,
         "build_date": plugin.build_date
     }
+    if mode == "file":
+        res['metadatas'].update({
+            "license": plugin.license,
+            "packager": plugin.packager,
+            "vendor": plugin.vendor,
+            "url": plugin.url,
+            "summary": plugin.summary
+        })
+    else:
+        res['metadatas'].update({
+            "license": plugin.configuration.license,
+            "packager": plugin.configuration.packager,
+            "vendor": plugin.configuration.vendor,
+            "url": plugin.configuration.url,
+            "summary": plugin.configuration.summary
+        })
     return res
 
 
@@ -119,9 +132,6 @@ def get_plugin_hash(name_or_filepath, mode="auto", plugins_base_dir=None):
 
     Returns:
         (string): string digest data for the plugin.
-
-    Raises:
-        FIXME: if the plugins base is not initialized.
 
     """
     infos = get_plugin_info(name_or_filepath, mode=mode,

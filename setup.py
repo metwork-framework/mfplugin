@@ -34,7 +34,6 @@ setup(
             "plugins.info = mfplugin.cli_tools.plugins_info:main",
             "plugins.hash = mfplugin.cli_tools.plugins_hash:main",
             "plugins.check = mfplugin.cli_tools.plugins_check:main",
-            "_plugins.init = mfplugin.cli_tools.plugins_init:main",
             "_plugins.make = mfplugin.cli_tools.plugins_make:main",
             "_plugins.develop = mfplugin.cli_tools.plugins_develop:main",
             "plugins.install = mfplugin.cli_tools.plugins_install:main",

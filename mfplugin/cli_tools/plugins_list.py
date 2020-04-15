@@ -6,7 +6,6 @@ import sys
 import json
 from mfplugin.manager import PluginsManager
 from terminaltables import SingleTable
-from mfutil.cli import echo_bold
 from mflog import get_logger
 
 DESCRIPTION = "get the installed plugins list"
@@ -29,13 +28,6 @@ def main():
         print("ERROR: json and raw options are mutually exclusives")
         sys.exit(1)
     manager = PluginsManager(plugins_base_dir=args.plugins_base_dir)
-    if not manager.initialized:
-        echo_bold("ERROR: the module is not initialized")
-        echo_bold("       => start it once before installing your plugin")
-        print()
-        print("hint: you can use %s.start to do that" % MFMODULE_LOWERCASE)
-        print()
-        sys.exit(3)
     plugins = manager.plugins.values()
     json_output = []
     table_data = []

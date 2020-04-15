@@ -6,7 +6,7 @@ import sys
 from mfplugin.utils import inside_a_plugin_env
 from mfplugin.manager import PluginsManager
 from mfplugin.utils import NotInstalledPlugin
-from mfutil.cli import echo_running, echo_nok, echo_ok, echo_bold
+from mfutil.cli import echo_running, echo_nok, echo_ok
 
 DESCRIPTION = "uninstall a plugin"
 MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'mfext')
@@ -27,13 +27,6 @@ def main():
         print("ERROR: Don't use plugins.install/uninstall inside a plugin_env")
         sys.exit(1)
     manager = PluginsManager(plugins_base_dir=args.plugins_base_dir)
-    if not manager.initialized:
-        echo_bold("ERROR: the module is not initialized")
-        echo_bold("       => start it once before installing your plugin")
-        print()
-        print("hint: you can use %s.start to do that" % MFMODULE_LOWERCASE)
-        print()
-        sys.exit(3)
     echo_running("- Uninstalling plugin %s..." % name)
     try:
         manager.uninstall_plugin(name)

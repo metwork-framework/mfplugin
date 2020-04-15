@@ -1,18 +1,19 @@
 import os
 import hashlib
-import envtpl
+import json
+import datetime
 import inspect
 import shutil
-import glob
+import socket
 from gitignore_parser import parse_gitignore
 from mflog import get_logger
 from mfutil import BashWrapper, get_unique_hexa_identifier, mkdir_p_or_die, \
-    BashWrapperOrRaise, mkdir_p
+    mkdir_p, BashWrapperOrRaise
 from mfplugin.configuration import Configuration
 from mfplugin.app import App
 from mfplugin.extra_daemon import ExtraDaemon
 from mfplugin.utils import BadPlugin, get_default_plugins_base_dir, \
-    get_rpm_cmd, layerapi2_label_file_to_plugin_name, validate_plugin_name, \
+    layerapi2_label_file_to_plugin_name, validate_plugin_name, \
     CantBuildPlugin, get_current_envs, PluginEnvContextManager, \
     get_configuration_class, get_app_class, get_extra_daemon_class, \
     is_jsonable, layerapi2_label_to_plugin_home, plugin_name_to_layerapi2_label
@@ -24,6 +25,7 @@ MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')
 MFMODULE = os.environ.get('MFMODULE', 'GENERIC')
 SPEC_TEMPLATE = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              "plugin.spec")
+BUID_HOST = os.environ.get('MFCOM_HOSTNAME_FULL', socket.gethostname())
 
 
 class Plugin(object):
@@ -50,15 +52,16 @@ class Plugin(object):
         self.is_dev_linked = os.path.islink(os.path.join(self.plugins_base_dir,
                                                          self.name))
         """Is the plugin a devlink? (boolean)."""
+        self._metadata = {}
+        self._files = None
         self.__loaded = False
         # FIXME: detect broken symlink
 
     def _get_debug(self):
         self.load()
-        self._load_release_ignored_files()
+        self._load_files()  # as it is not included in load() for perfs reasons
         res = {x: y for x, y in inspect.getmembers(self)
-               if is_jsonable(y) and not x.startswith('_')
-               and not x.startswith('raw_')}
+               if is_jsonable(y) and not x.startswith('_')}
         res['configuration'] = self.configuration._get_debug()
         return res
 
@@ -80,12 +83,36 @@ class Plugin(object):
         )
         self._layerapi2_layer_name = plugin_name_to_layerapi2_label(self.name)
         self._load_format_version()
-        self._load_rpm_infos()
+        self._load_metadata()
         self._load_version_release()
+        # self._load_files() is not included here for perfs reasons
 
     def load_full(self):
         self.load()
         self.configuration.load()
+
+    def _load_metadata(self):
+        if self.is_dev_linked:
+            self._is_installed = True
+            return
+        metadata_filepath = "%s/%s/.metadata.json" % (self.plugins_base_dir,
+                                                      self.name)
+        self._is_installed = os.path.isfile(metadata_filepath)
+        if self._is_installed:
+            try:
+                with open(metadata_filepath, "r") as f:
+                    c = f.read().strip()
+            except Exception as e:
+                raise BadPlugin("can't read %s file" % metadata_filepath,
+                                original_exception=e)
+            try:
+                self._metadata = json.loads(c)
+            except Exception as e:
+                raise BadPlugin("can't decode %s file" % metadata_filepath,
+                                original_exception=e)
+        self._build_host = self._metadata.get("build_host", "unknown")
+        self._build_date = self._metadata.get("build_date", "unknown")
+        self._size = self._metadata.get("size", "unknown")
 
     def get_plugin_env_dict(self, add_current_envs=True,
                             set_tmp_dir=True):
@@ -144,18 +171,8 @@ class Plugin(object):
             self._version = "dev_link"
             self._release = "dev_link"
             return
-        frmt = "%{version}~~~%{release}\\n"
-        cmd = get_rpm_cmd(self.plugins_base_dir, '-q',
-                          '--qf "%s" %s' % (frmt, self.name))
-        x = BashWrapper(cmd)
-        if not x:
-            raise Exception(x)
-        if x:
-            tmp = x.stdout.split('~~~')
-            if len(tmp) < 2:
-                raise Exception("incorrect output for cmd: %s" % cmd)
-            self._version = tmp[0]
-            self._release = tmp[1]
+        self._version = self._metadata["version"]
+        self._release = self._metadata["release"]
 
     def _load_format_version(self):
         pfv = os.path.join(self.home, ".plugin_format_version")
@@ -179,128 +196,110 @@ class Plugin(object):
                 res.append(9999)
         self._format_version = res[0:3]
 
-    def _load_release_ignored_files(self):
-        # not included in load() method for perf reasons
-        self._release_ignored_files = []
-        ignore_filepath = os.path.join(self.home, ".releaseignore")
-        if os.path.isfile(ignore_filepath):
-            matches = parse_gitignore(ignore_filepath)
-            for r, d, f in os.walk(self.home):
-                for flder in d:
-                    if matches(os.path.join(self.home, r, flder)):
-                        self._release_ignored_files.append(
-                            os.path.relpath(os.path.join(r, flder),
-                                            start=self.home)
-                        )
-                        # we remove the directory from walking
-                        # https://stackoverflow.com/a/19859907/433050
-                        d.remove(flder)
-                for fle in f:
-                    if matches(os.path.join(self.home, r, fle)):
-                        self._release_ignored_files.append(
-                            os.path.relpath(os.path.join(r, fle),
-                                            start=self.home)
-                        )
-
     def print_dangerous_state(self):
         res = BashWrapper("_plugins.is_dangerous %s" % (self.name,))
         if res and res.stdout and len(res.stdout) > 0:
             print(res.stdout)
-
-    def _load_rpm_infos(self):
-        self._raw_files_output = "DEV_LINK"
-        self._build_host = "unknown"
-        self._build_date = "unknown"
-        self._size = "unknown"
-        if self.is_dev_linked:
-            self._raw_metadata_output = "DEV_LINK"
-            self._raw_files_output = "DEV_LINK"
-            self._files = []
-            self._is_installed = True
-            return
-        cmd = get_rpm_cmd(self.plugins_base_dir, '-qi', self.name)
-        x = BashWrapper(cmd)
-        if not x:
-            self._is_installed = False
-            return
-        self._raw_metadata_output = x.stdout
-        for line in x.stdout.split('\n'):
-            tmp = line.strip().split(':', 1)
-            if len(tmp) <= 1:
-                continue
-            name = tmp[0].strip().lower()
-            value = tmp[1].strip()
-            if name == "build host":
-                self._build_host = value
-            if name == "build date":
-                self._build_date = value
-            if name == "size":
-                self._size = value
-        cmd = get_rpm_cmd(self.plugins_base_dir, '-ql', self.name)
-        x = BashWrapper(cmd)
-        if not x:
-            raise Exception(x)
-        self._is_installed = True
-        self._raw_files_output = x.stdout
-        self._files = [x.strip() for x in x.stdout.split('\n')]
 
     def get_hash(self):
         sid = ", ".join([self.build_host, self.build_date, self.size,
                         self.version, self.release])
         return hashlib.md5(sid.encode('utf8')).hexdigest()
 
-    def _make_plugin_spec(self, dest_file, name, version, summary, license,
-                          packager, vendor, url, excludes):
-        with open(SPEC_TEMPLATE, "r") as f:
-            template = f.read()
-        extra_vars = {"NAME": name, "VERSION": version, "SUMMARY": summary,
-                      "LICENSE": license, "PACKAGER": packager,
-                      "VENDOR": vendor, "URL": url, "EXCLUDES": excludes}
-        res = envtpl.render_string(template, extra_variables=extra_vars,
-                                   keep_multi_blank_lines=False)
-        with open(dest_file, "w") as f:
-            f.write(res)
-
     def build(self):
         self.load()
-        base = os.path.join(self.plugins_base_dir, "base")
         pwd = os.getcwd()
         tmpdir = os.path.join(MFMODULE_RUNTIME_HOME, "tmp",
                               "plugin_%s" % get_unique_hexa_identifier())
-        mkdir_p_or_die(os.path.join(tmpdir, "BUILD"))
-        mkdir_p_or_die(os.path.join(tmpdir, "RPMS"))
-        mkdir_p_or_die(os.path.join(tmpdir, "SRPMS"))
-        config = self.configuration
-        self._make_plugin_spec(
-            os.path.join(tmpdir, "specfile.spec"),
-            self.name, config.version,
-            config.summary, config.license, config.packager,
-            config.vendor, config.url, self.release_ignored_files
-        )
-        cmd = ""
-        if MFEXT_HOME is not None:
-            cmd = cmd + "source %s/lib/bash_utils.sh ; " % MFEXT_HOME
-            cmd = cmd + "layer_load rpm@mfext ; "
-        cmd = cmd + 'rpmbuild --define "_topdir %s" --define "pwd %s" ' \
-            '--define "prefix %s" --dbpath %s ' \
-            '-bb %s/specfile.spec' % (tmpdir, self.home, tmpdir,
-                                      base, tmpdir)
-        x = BashWrapperOrRaise(cmd, CantBuildPlugin,
-                               "can't build plugin %s" % self.home)
-        tmp = glob.glob(os.path.join(tmpdir, "RPMS", "x86_64", "*.rpm"))
-        if len(tmp) == 0:
-            raise CantBuildPlugin("can't find generated plugin" %
-                                  self.home, bash_wrapper=x)
-        plugin_path = tmp[0]
-        new_basename = \
-            os.path.basename(plugin_path).replace("x86_64.rpm",
-                                                  "metwork.%s.plugin" %
-                                                  MFMODULE_LOWERCASE)
-        new_plugin_path = os.path.join(pwd, new_basename)
-        shutil.move(plugin_path, new_plugin_path)
+        filename = f"{self.name}-{self.version}-{self.release}." \
+            f"metwork.{MFMODULE_LOWERCASE}.plugin"
+        mkdir_p_or_die(tmpdir)
+        shutil.copytree(self.home, os.path.join(tmpdir, "metwork_plugin"),
+                        symlinks=True)
+        matches = None
+        ignore_filepath = os.path.join(self.home, ".releaseignore")
+        if os.path.isfile(ignore_filepath):
+            try:
+                matches = parse_gitignore(ignore_filepath)
+            except Exception as e:
+                raise BadPlugin("bad %s file" % ignore_filepath,
+                                original_exception=e)
+        root = os.path.join(tmpdir, "metwork_plugin")
+        if matches is not None:
+            for r, d, f in os.walk(root):
+                for flder in d:
+                    full_path = os.path.join(r, flder)
+                    path = self.home + full_path[len(root):]
+                    if matches(path):
+                        shutil.rmtree(full_path, ignore_errors=True)
+                        # we remove the directory from walking
+                        # https://stackoverflow.com/a/19859907/433050
+                        d.remove(flder)
+                for fle in f:
+                    full_path = os.path.join(r, fle)
+                    path = self.home + full_path[len(root):]
+                    if matches(path):
+                        try:
+                            os.unlink(full_path)
+                        except Exception:
+                            pass
+        files = []
+        total_size = 0
+        for r, d, f in os.walk(os.path.join(tmpdir, "metwork_plugin")):
+            for fle in f:
+                path = os.path.join(r, fle)
+                files.append("metwork_plugin/" + path[len(root) + 1:])
+                if not os.path.islink(path):
+                    total_size = total_size + os.path.getsize(path)
+        with open("%s/metwork_plugin/.files.json" % tmpdir, "w") as f:
+            f.write(json.dumps(files, indent=4))
+        metadata = {
+            "version": self.version,
+            "release": self.release,
+            "build_host": BUID_HOST,
+            "build_date": datetime.datetime.utcnow().isoformat()[0:19] + 'Z',
+            "size": str(total_size),
+            "summary": self.configuration.summary,
+            "license": self.configuration.license,
+            "packager": self.configuration.packager,
+            "vendor": self.configuration.vendor,
+            "url": self.configuration.url
+        }
+        with open("%s/metwork_plugin/.metadata.json" % tmpdir, "w") as f:
+            f.write(json.dumps(metadata, indent=4))
+        plugin_path = os.path.abspath(f"{pwd}/{filename}")
+        cmd = f"cd {tmpdir} && tar -cvf plugin.tar metwork_plugin && " \
+            f"gzip -f plugin.tar && " \
+            f"mv plugin.tar.gz {plugin_path}"
+        BashWrapperOrRaise(cmd, CantBuildPlugin)
+        if not os.path.isfile(plugin_path):
+            raise CantBuildPlugin("can't find plugin file: %s" % plugin_path)
         shutil.rmtree(tmpdir, True)
-        os.chdir(pwd)
-        return new_plugin_path
+        return plugin_path
+
+    def _load_files(self):
+        if self._files is not None:
+            return
+        if self.is_dev_linked:
+            self._files = []
+            return
+        if not self.is_installed:
+            self._files = []
+            return
+        filepath = "%s/%s/.files.json" % (self.plugins_base_dir, self.name)
+        if not os.path.isfile(filepath):
+            raise BadPlugin("%s is missing" % filepath)
+        try:
+            with open(filepath, "r") as f:
+                c = f.read().strip()
+        except Exception as e:
+            raise BadPlugin("can't read %s file" % filepath,
+                            original_exception=e)
+        try:
+            self._files = json.loads(c)
+        except Exception as e:
+            raise BadPlugin("can't decode %s file" % filepath,
+                            original_exception=e)
 
     @property
     def configuration(self):
@@ -348,22 +347,7 @@ class Plugin(object):
         return self._is_installed
 
     @property
-    def release_ignored_files(self):
-        self.load()
-        self._load_release_ignored_files()
-        return self._release_ignored_files
-
-    @property
-    def raw_metadata_output(self):
-        self.load()
-        return self._raw_metadata_output
-
-    @property
-    def raw_files_output(self):
-        self.load()
-        return self._raw_files_output
-
-    @property
     def files(self):
         self.load()
+        self._load_files()  # not included in load() for perfs reasons
         return self._files

@@ -1,7 +1,8 @@
 import os
-from mfutil import BashWrapper
-from mfplugin.utils import get_rpm_cmd, get_default_plugins_base_dir, \
-    BadPluginFile
+import tarfile
+import json
+from mfplugin.utils import get_default_plugins_base_dir, \
+    BadPluginFile, layerapi2_label_to_plugin_name
 
 
 class PluginFile(object):
@@ -19,58 +20,77 @@ class PluginFile(object):
         if self.__loaded:
             return
         self.__loaded = True
-        frmt = "%{name}~~~%{version}~~~%{release}\\n"
-        cmd = get_rpm_cmd(self.plugins_base_dir, '-qp',
-                          '--qf "%s" "%s"' % (frmt, self.plugin_filepath))
-        x = BashWrapper(cmd)
-        if not x:
-            raise BadPluginFile(x)
-        if x:
-            tmp = x.stdout.split('~~~')
-            if len(tmp) < 2:
-                raise BadPluginFile("incorrect output for cmd: %s" % cmd)
-            self._name = tmp[0]
-            self._version = tmp[1]
-            self._release = tmp[2]
-        cmd = get_rpm_cmd(self.plugins_base_dir, '-qi',
-                          "-p " + self.plugin_filepath)
-        x = BashWrapper(cmd)
-        if not x:
-            raise BadPluginFile(x)
-        self._raw_metadata_output = x.stdout
-        for line in x.stdout.split('\n'):
-            tmp = line.strip().split(':', 1)
-            if len(tmp) <= 1:
-                continue
-            name = tmp[0].strip().lower()
-            value = tmp[1].strip()
-            if name == "build host":
-                self._build_host = value
-            if name == "build date":
-                self._build_date = value
-            if name == "size":
-                self._size = value
-        cmd = get_rpm_cmd(self.plugins_base_dir, '-ql',
-                          "-p " + self.plugin_filepath)
-        x = BashWrapper(cmd)
-        if not x:
-            raise Exception(x)
-        self._raw_files_output = x.stdout
-        self._files = [x.strip() for x in x.stdout.split('\n')]
-        found = False
-        for f in self._files:
-            if "/.plugin_format_version" in f:
-                found = True
-                break
-        if not found:
-            raise BadPluginFile("This plugin file is too old => you have to "
-                                "rebuild it with a more recent MetWork "
-                                "version")
+        if not os.path.isfile(self.plugin_filepath):
+            raise BadPluginFile("%s does not exist" % self.plugin_filepath)
+        try:
+            tf = tarfile.open(name=self.plugin_filepath, mode='r')
+        except Exception as e:
+            raise BadPluginFile(
+                "can't open %s as a tar.gz file => this is probably not a "
+                "metwork >= 1.0 plugin" % self.plugin_filepath,
+                original_exception=e)
+        try:
+            reader1 = tf.extractfile("metwork_plugin/.layerapi2_label")
+            label = reader1.read().decode('utf8').strip()
+            self._name = layerapi2_label_to_plugin_name(label)
+        except Exception as e:
+            raise BadPluginFile(
+                "can't read/find metwork_plugin/.layerapi2_label file in "
+                "plugin", original_exception=e)
+        try:
+            reader2 = tf.extractfile("metwork_plugin/.metadata.json")
+            metadata = json.loads(reader2.read().decode('utf8').strip())
+            self._version = metadata['version']
+            self._release = metadata['release']
+            self._build_host = metadata['build_host']
+            self._build_date = metadata['build_date']
+            self._size = metadata['size']
+            self._summary = metadata['summary']
+            self._license = metadata['license']
+            self._packager = metadata['packager']
+            self._vendor = metadata['vendor']
+            self._url = metadata['url']
+        except Exception as e:
+            raise BadPluginFile(
+                "can't read/find metwork_plugin/.metadata.json file in "
+                "plugin", original_exception=e)
+        try:
+            reader3 = tf.extractfile("metwork_plugin/.files.json")
+            self._files = json.loads(reader3.read().decode('utf8').strip())
+        except Exception as e:
+            raise BadPluginFile(
+                "can't read/find metwork_plugin/.files.json file in "
+                "plugin", original_exception=e)
+
+    @property
+    def summary(self):
+        self.load()
+        return self._summary
+
+    @property
+    def license(self):
+        self.load()
+        return self._license
+
+    @property
+    def packager(self):
+        self.load()
+        return self._packager
 
     @property
     def name(self):
         self.load()
         return self._name
+
+    @property
+    def vendor(self):
+        self.load()
+        return self._vendor
+
+    @property
+    def url(self):
+        self.load()
+        return self._url
 
     @property
     def version(self):
@@ -96,16 +116,6 @@ class PluginFile(object):
     def build_date(self):
         self.load()
         return self._build_date
-
-    @property
-    def raw_metadata_output(self):
-        self.load()
-        return self._raw_metadata_output
-
-    @property
-    def raw_files_output(self):
-        self.load()
-        return self._raw_files_output
 
     @property
     def files(self):

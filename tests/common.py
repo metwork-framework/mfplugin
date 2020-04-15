@@ -2,7 +2,6 @@ import os
 import shutil
 # unset_env import must be before mfplugin.* imports
 import unset_env  # noqa: F401
-from mfutil import mkdir_p_or_die
 from mfplugin.plugin import Plugin
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -12,7 +11,6 @@ BASE = os.path.join(CURRENT_DIR, "tmp", "plugins_base_dir")
 def with_empty_base(func):
     def wrapper(*args, **kwargs):
         shutil.rmtree(BASE, True)
-        mkdir_p_or_die(BASE)
         func(*args, **kwargs)
         shutil.rmtree(BASE, True)
     return wrapper

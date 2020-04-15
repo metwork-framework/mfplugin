@@ -38,13 +38,6 @@ def main():
             echo_bold(str(e))
             sys.exit(3)
     manager = PluginsManager(plugins_base_dir=args.plugins_base_dir)
-    if not manager.initialized:
-        echo_bold("ERROR: the module is not initialized")
-        echo_bold("       => start it once before installing your plugin")
-        print()
-        print("hint: you can use %s.start to do that" % MFMODULE_LOWERCASE)
-        print()
-        sys.exit(3)
     echo_running("- Checking plugin file...")
     try:
         pf = PluginFile(args.plugin_filepath)
