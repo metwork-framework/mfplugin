@@ -82,8 +82,6 @@ class Configuration(object):
             self._config_filepath,
             "%s/config/plugins/%s.ini" % (MFMODULE_RUNTIME_HOME,
                                           self.plugin_name),
-            "/etc/metwork.config.d/%s/external_plugins/%s.ini" %
-            (MFMODULE_LOWERCASE, self.plugin_name),
             "/etc/metwork.config.d/%s/plugins/%s.ini" %
             (MFMODULE_LOWERCASE, self.plugin_name)
         ]
@@ -136,13 +134,13 @@ class Configuration(object):
         for section in schema.keys():
             if section.startswith('_'):
                 continue
-            if 'schema' not in schema['section']:
+            if 'schema' not in schema[section]:
                 continue
             public_schema[section] = \
                 {x: y for x, y in schema[section].items() if x != "schema"}
             public_schema[section]['schema'] = {}
             for key in schema[section]['schema'].keys():
-                if key.startwith('_'):
+                if key.startswith('_'):
                     continue
                 public_schema[section]['schema'][key] = \
                     schema[section]['schema'][key]
@@ -210,7 +208,7 @@ class Configuration(object):
             schema = self.__get_public_schema(parser)
         else:
             schema = self.__get_schema(parser)
-        status = validate_configparser(v, parser, schema)
+        status = validate_configparser(v, parser, schema, public=public)
         if status is False:
             return (status, v.errors, None)
         else:
@@ -222,19 +220,35 @@ class Configuration(object):
             if self.__loaded:
                 return False
             self.__loaded = True
-            status, v_errors, v_document = \
-                self.__validate([self._config_filepath])
+            status, vv_errors, v_document = self.__validate(self.paths)
             if status is False:
-                errors = cerberus_errors_to_human_string(v_errors)
-                raise BadPlugin(
-                    "invalid configuration file: %s" % self._config_filepath,
-                    validation_errors=errors)
-            if len(self.paths) > 1:
-                status, v_errors, v_document = \
-                    self.__validate(self.paths, public=True)
-                if status is False:
+                if len(self.paths) == 1:
+                    errors = cerberus_errors_to_human_string(vv_errors)
+                    raise BadPlugin(
+                        "invalid configuration file: %s" %
+                        self._config_filepath,
+                        validation_errors=errors)
+                else:
+                    # we are trying to find the bad file
+                    status, v_errors, _ = \
+                        self.__validate([self._config_filepath])
                     errors = cerberus_errors_to_human_string(v_errors)
-                    candidates = " or ".join(self.paths[1:])
+                    raise BadPlugin(
+                        "invalid configuration file: %s" %
+                        self._config_filepath,
+                        validation_errors=errors)
+                    for p in self.paths:
+                        if p == self._config_filepath:
+                            continue
+                        status, v_errors, _ = \
+                            self.__validate([p], public=True)
+                        if status is False:
+                            errors = cerberus_errors_to_human_string(v_errors)
+                            raise BadPlugin(
+                                "invalid configuration, please fix: %s" % p,
+                                validation_errors=errors)
+                    errors = cerberus_errors_to_human_string(vv_errors)
+                    candidates = " or ".join(self.paths)
                     raise BadPlugin(
                         "invalid configuration, please fix: %s" % candidates,
                         validation_errors=errors)
@@ -243,12 +257,16 @@ class Configuration(object):
             self._extra_daemons = []
             # FIXME: step mfdata ?
             for section in [x for x in self._doc.keys()
-                            if x.startswith("app_")]:
+                            if x.startswith("app_") or x.startswith("step_")]:
                 c = self.app_class
-                command = c(self.plugin_home,
-                            self.plugin_name,
-                            section.replace('app_', '', 1),
-                            self._doc[section])
+                if section.startswith("app_"):
+                    name = section[4:]
+                elif section.startswith("step_"):
+                    name = section[5:]
+                else:
+                    raise Exception("non handled case: %s" % section)
+                command = c(self.plugin_home, self.plugin_name, name,
+                            self._doc[section], self._doc.get('custom', {}))
                 self.add_app(command)
             for section in [x for x in self._doc.keys()
                             if x.startswith("extra_daemon_")]:
@@ -256,7 +274,8 @@ class Configuration(object):
                 command = c(self.plugin_home,
                             self.plugin_name,
                             section.replace('extra_daemon_', '', 1),
-                            self._doc[section])
+                            self._doc[section],
+                            self._doc.get('custom', {}))
                 self.add_extra_daemon(command)
             self.after_load()
 
@@ -276,6 +295,11 @@ class Configuration(object):
 
     @property
     def apps(self):
+        self.load()
+        return self._apps
+
+    @property
+    def steps(self):
         self.load()
         return self._apps
 

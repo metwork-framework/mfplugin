@@ -34,7 +34,7 @@ def main():
     else:
         echo_ok()
         if args.show_plugin_path:
-            echo_bold("plugins is ready at %s" % path)
+            echo_bold("plugin file is ready at %s" % path)
 
 
 if __name__ == '__main__':

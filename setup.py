@@ -38,6 +38,7 @@ setup(
             "_plugins.develop = mfplugin.cli_tools.plugins_develop:main",
             "plugins.install = mfplugin.cli_tools.plugins_install:main",
             "plugins.uninstall = mfplugin.cli_tools.plugins_uninstall:main",
+            "plugins.repackage = mfplugin.cli_tools.plugins_repackage:main",
             "plugins_validate_name = "
             "mfplugin.cli_tools.plugins_validate_name:main",
         ]

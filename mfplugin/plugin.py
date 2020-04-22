@@ -91,9 +91,16 @@ class Plugin(object):
         self.load()
         self.configuration.load()
 
+    def reload(self):
+        self.__loaded = False
+        self.load()
+
     def _load_metadata(self):
         if self.is_dev_linked:
             self._is_installed = True
+            self._build_host = "unknown"
+            self._build_date = "unknown"
+            self._size = "unknown"
             return
         metadata_filepath = "%s/%s/.metadata.json" % (self.plugins_base_dir,
                                                       self.name)
@@ -205,6 +212,14 @@ class Plugin(object):
         sid = ", ".join([self.build_host, self.build_date, self.size,
                         self.version, self.release])
         return hashlib.md5(sid.encode('utf8')).hexdigest()
+
+    def repackage(self):
+        self.load()
+        tmpdir = os.path.join(MFMODULE_RUNTIME_HOME, "tmp",
+                              "plugin_%s" % get_unique_hexa_identifier())
+        mkdir_p_or_die(tmpdir)
+        shutil.copytree(self.home, os.path.join(tmpdir, "metwork_plugin"),
+                        symlinks=True)
 
     def build(self):
         self.load()

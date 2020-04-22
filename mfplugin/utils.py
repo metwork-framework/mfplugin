@@ -148,12 +148,13 @@ def inside_a_plugin_env():
     return ("%s_CURRENT_PLUGIN_NAME" % MFMODULE) in os.environ
 
 
-def validate_configparser(v, cpobj, schema):
+def validate_configparser(v, cpobj, schema, public=False):
     document = {}
     for section in cpobj.sections():
         document[section] = {}
         for key in cpobj.options(section):
-            document[section][key] = cpobj.get(section, key)
+            if not public or not key.startswith('_'):
+                document[section][key] = cpobj.get(section, key)
     return v.validate(document, schema)
 
 

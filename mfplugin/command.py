@@ -1,6 +1,7 @@
 import os
 from mfplugin.utils import NON_REQUIRED_INTEGER_DEFAULT_0, to_bool, \
-    NON_REQUIRED_STRING_DEFAULT_EMPTY, NON_REQUIRED_BOOLEAN_DEFAULT_FALSE
+    NON_REQUIRED_STRING_DEFAULT_EMPTY, NON_REQUIRED_BOOLEAN_DEFAULT_FALSE, \
+    NON_REQUIRED_INTEGER
 
 __pdoc__ = {
     "coerce_log_split_stdout_sterr": False,
@@ -39,7 +40,10 @@ COMMAND_SCHEMA = {
     },
     "numprocesses": NON_REQUIRED_INTEGER_DEFAULT_0,
     "_cmd_and_args": NON_REQUIRED_STRING_DEFAULT_EMPTY,
-    "graceful_timeout": NON_REQUIRED_INTEGER_DEFAULT_0,
+    "graceful_timeout": {
+        **NON_REQUIRED_INTEGER,
+        "default": 10
+    },
     "max_age": NON_REQUIRED_INTEGER_DEFAULT_0,
     "rlimit_as": NON_REQUIRED_INTEGER_DEFAULT_0,
     "rlimit_nofile": NON_REQUIRED_INTEGER_DEFAULT_0,
@@ -51,10 +55,12 @@ COMMAND_SCHEMA = {
 
 class Command(object):
 
-    def __init__(self, plugin_home, plugin_name, name, doc_fragment):
+    def __init__(self, plugin_home, plugin_name, name, doc_fragment,
+                 custom_fragment):
         self.plugin_name = plugin_name
         self.plugin_home = plugin_home
         self._doc_fragment = doc_fragment
+        self._custom_fragment = custom_fragment
         self.name = name
         self._type = "command"
 
@@ -63,7 +69,7 @@ class Command(object):
         if new_name is None:
             new_name = self.name
         return c(self.plugin_home, self.plugin_name, new_name,
-                 dict(self._doc_fragment))
+                 dict(self._doc_fragment), dict(self._custom_fragment))
 
     @property
     def cmd_and_args(self):

@@ -6,6 +6,8 @@ import glob
 from functools import wraps
 from mflog import get_logger
 from mfutil import mkdir_p_or_die, BashWrapperOrRaise
+from mfutil import get_unique_hexa_identifier
+from configupdater import ConfigUpdater
 from mfplugin.plugin import Plugin
 from mfplugin.configuration import Configuration
 from mfplugin.app import App
@@ -238,6 +240,31 @@ class PluginsManager(object):
 
         """
         self._develop_plugin(plugin_home)
+
+    def repackage_plugin(self, name):
+        p = self.get_plugin(name)
+        p.load_full()
+        if p.is_dev_linked:
+            raise Exception("can't repackage a devlinked plugin")
+        tmpdir = os.path.join(MFMODULE_RUNTIME_HOME, "tmp",
+                              "plugin_%s" % get_unique_hexa_identifier())
+        shutil.copytree(p.home, tmpdir, symlinks=True)
+        x = ConfigUpdater()
+        x.read("%s/config.ini" % tmpdir)
+        sections = p.configuration._doc.keys()
+        for section in sections:
+            for option in p.configuration._doc[section].keys():
+                if option.startswith('_'):
+                    continue
+                val = p.configuration._doc[section][option]
+                try:
+                    x[section][option].value = val
+                except Exception:
+                    pass
+        x.update_file()
+        os.system("diff %s/config.ini %s/config.ini" % (p.home, tmpdir))
+        new_p = self.make_plugin(tmpdir)
+        return new_p.build()
 
     def load(self):
         if self.__loaded:

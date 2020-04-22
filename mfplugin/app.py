@@ -7,6 +7,8 @@ APP_SCHEMA = {
 
 class App(Command):
 
-    def __init__(self, plugin_home, plugin_name, name, doc_fragment):
-        Command.__init__(self, plugin_home, plugin_name, name, doc_fragment)
+    def __init__(self, plugin_home, plugin_name, name, doc_fragment,
+                 custom_fragment):
+        Command.__init__(self, plugin_home, plugin_name, name, doc_fragment,
+                         custom_fragment)
         self._type = "app"
