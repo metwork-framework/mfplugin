@@ -114,7 +114,10 @@ class Configuration(object):
                     (MFMODULE, self.plugin_name.upper(),
                      section.upper().replace('-', '_'),
                      option.upper().replace('-', '_'))
-                env_var_dict[name] = "%s" % val
+                if isinstance(val, bool):
+                    env_var_dict[name] = "1" if val else "0"
+                else:
+                    env_var_dict[name] = "%s" % val
         return env_var_dict
 
     def __get_schema(self, parser):

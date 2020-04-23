@@ -138,8 +138,8 @@ def get_plugin_hash(name_or_filepath, mode="auto", plugins_base_dir=None):
                             plugins_base_dir=plugins_base_dir)
     if infos is None:
         return None
-    sid = ", ".join([infos['metadatas'].get('build host', 'unknown'),
-                     infos['metadatas'].get('build date', 'unknown'),
+    sid = ", ".join([infos['metadatas'].get('build_host', 'unknown'),
+                     infos['metadatas'].get('build_date', 'unknown'),
                      infos['metadatas'].get('size', 'unknown'),
                      infos['metadatas'].get('version', 'unknown'),
                      infos['metadatas'].get('release', 'unknown')])
