@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import os
+import io
+import contextlib
 import argparse
 import sys
 from mfplugin.utils import inside_a_plugin_env
@@ -32,13 +34,18 @@ def main():
     manager = PluginsManager(plugins_base_dir=args.plugins_base_dir)
     echo_running("- Repackaging plugin %s..." % name)
     try:
-        path = manager.repackage_plugin(name)
+        f = io.StringIO()
+        with contextlib.redirect_stderr(f):
+            path = manager.repackage_plugin(name)
     except NotInstalledPlugin:
         echo_nok()
         echo_bold(" => not installed plugin")
         sys.exit(1)
     except Exception as e:
         echo_nok()
+        stderr = f.getvalue()
+        if stderr != '':
+            print(stderr)
         print(e)
         if args.debug:
             print("details of the problem:")
@@ -47,6 +54,9 @@ def main():
             print("note: use --debug option for more details")
     else:
         echo_ok()
+        stderr = f.getvalue()
+        if stderr != '':
+            print(stderr)
         echo_bold("plugin file is ready at %s" % path)
 
 

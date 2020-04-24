@@ -65,7 +65,8 @@ class Configuration(object):
 
     def __init__(self, plugin_name, plugin_home, config_filepath=None,
                  extra_daemon_class=None,
-                 app_class=None):
+                 app_class=None,
+                 dont_read_config_overrides=False):
         self.plugin_name = plugin_name
         self.plugin_home = plugin_home
         self.app_class = get_app_class(app_class, App)
@@ -78,13 +79,16 @@ class Configuration(object):
         if not os.path.isfile(self._config_filepath):
             raise BadPlugin("configuration file: %s is missing" %
                             self._config_filepath)
-        paths = [
-            self._config_filepath,
-            "%s/config/plugins/%s.ini" % (MFMODULE_RUNTIME_HOME,
-                                          self.plugin_name),
-            "/etc/metwork.config.d/%s/plugins/%s.ini" %
-            (MFMODULE_LOWERCASE, self.plugin_name)
-        ]
+        if dont_read_config_overrides:
+            paths = [self._config_filepath]
+        else:
+            paths = [
+                self._config_filepath,
+                "%s/config/plugins/%s.ini" % (MFMODULE_RUNTIME_HOME,
+                                              self.plugin_name),
+                "/etc/metwork.config.d/%s/plugins/%s.ini" %
+                (MFMODULE_LOWERCASE, self.plugin_name)
+            ]
         self.paths = [x for x in paths if os.path.isfile(x)]
         self._commands = None
         self._doc = None
@@ -110,9 +114,8 @@ class Configuration(object):
                         option.strip().startswith(ignore_keys_starting_with):
                     continue
                 val = self._doc[section][option]
-                name = "%s_PLUGIN_%s_%s_%s" % \
-                    (MFMODULE, self.plugin_name.upper(),
-                     section.upper().replace('-', '_'),
+                name = "%s_CURRENT_PLUGIN_%s_%s" % \
+                    (MFMODULE, section.upper().replace('-', '_'),
                      option.upper().replace('-', '_'))
                 if isinstance(val, bool):
                     env_var_dict[name] = "1" if val else "0"
@@ -201,7 +204,8 @@ class Configuration(object):
         v = Validator()
         v.allow_unknown = False
         v.require_all = True
-        parser = OpinionatedConfigParser()
+        parser = OpinionatedConfigParser(delimiters=("=",),
+                                         comment_prefixes=("#",))
         try:
             parser.read(paths)
         except Exception:

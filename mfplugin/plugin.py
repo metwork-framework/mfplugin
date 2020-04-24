@@ -33,7 +33,8 @@ class Plugin(object):
     def __init__(self, plugins_base_dir, home,
                  configuration_class=None,
                  extra_daemon_class=None,
-                 app_class=None):
+                 app_class=None,
+                 dont_read_config_overrides=False):
         self.configuration_class = get_configuration_class(configuration_class,
                                                            Configuration)
         """Configuration class."""
@@ -52,6 +53,7 @@ class Plugin(object):
         self.is_dev_linked = os.path.islink(os.path.join(self.plugins_base_dir,
                                                          self.name))
         """Is the plugin a devlink? (boolean)."""
+        self._dont_read_config_overrides = dont_read_config_overrides
         self._metadata = {}
         self._files = None
         self.__loaded = False
@@ -79,7 +81,8 @@ class Plugin(object):
         self._configuration = c(
             self.name, self.home,
             app_class=self.app_class,
-            extra_daemon_class=self.extra_daemon_class
+            extra_daemon_class=self.extra_daemon_class,
+            dont_read_config_overrides=self._dont_read_config_overrides
         )
         self._layerapi2_layer_name = plugin_name_to_layerapi2_label(self.name)
         self._load_format_version()

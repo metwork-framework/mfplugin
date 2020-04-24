@@ -1,4 +1,5 @@
 import os
+import sys
 import tarfile
 import filelock
 import shutil
@@ -66,11 +67,12 @@ class PluginsManager(object):
             mkdir_p_or_die(self.plugins_base_dir)
         self.__loaded = False
 
-    def make_plugin(self, plugin_home):
+    def make_plugin(self, plugin_home, dont_read_config_overrides=False):
         return Plugin(self.plugins_base_dir, plugin_home,
                       configuration_class=self.configuration_class,
                       app_class=self.app_class,
-                      extra_daemon_class=self.extra_daemon_class)
+                      extra_daemon_class=self.extra_daemon_class,
+                      dont_read_config_overrides=dont_read_config_overrides)
 
     def get_plugin(self, name):
         label = plugin_name_to_layerapi2_label(name)
@@ -89,9 +91,11 @@ class PluginsManager(object):
             }
             # FIXME: should be python methods and not shell
             with PluginEnvContextManager(env_context):
-                BashWrapperOrRaise(
+                x = BashWrapperOrRaise(
                     "_plugins.preuninstall %s %s %s" %
                     (plugin.name, plugin.version, plugin.release))
+                if len(x.stderr) != 0:
+                    print(x.stderr, file=sys.stderr)
 
     def _postinstall_plugin(self, plugin):
         if shutil.which("_plugins.postinstall"):
@@ -100,9 +104,11 @@ class PluginsManager(object):
             }
             # FIXME: should be python methods and not shell
             with PluginEnvContextManager(env_context):
-                BashWrapperOrRaise(
+                x = BashWrapperOrRaise(
                     "_plugins.postinstall %s %s %s" %
                     (plugin.name, plugin.version, plugin.release))
+                if len(x.stderr) != 0:
+                    print(x.stderr, file=sys.stderr)
 
     def _uninstall_plugin(self, name):
         p = self.get_plugin(name)
@@ -249,6 +255,8 @@ class PluginsManager(object):
         tmpdir = os.path.join(MFMODULE_RUNTIME_HOME, "tmp",
                               "plugin_%s" % get_unique_hexa_identifier())
         shutil.copytree(p.home, tmpdir, symlinks=True)
+        newp = self.make_plugin(tmpdir, dont_read_config_overrides=True)
+        newp.load_full()
         x = ConfigUpdater()
         x.read("%s/config.ini" % tmpdir)
         sections = p.configuration._doc.keys()
@@ -257,12 +265,20 @@ class PluginsManager(object):
                 if option.startswith('_'):
                     continue
                 val = p.configuration._doc[section][option]
+                newval = newp.configuration._doc[section][option]
                 try:
-                    x[section][option].value = val
+                    if newval == val:
+                        continue
+                    print("CHANGED [%s]/%s: %s => %s" %
+                          (section, option, newval, val),
+                          file=sys.stderr)
+                    if isinstance(val, bool):
+                        x[section][option].value = "1" if val else "0"
+                    else:
+                        x[section][option].value = val
                 except Exception:
                     pass
         x.update_file()
-        os.system("diff %s/config.ini %s/config.ini" % (p.home, tmpdir))
         new_p = self.make_plugin(tmpdir)
         return new_p.build()
 

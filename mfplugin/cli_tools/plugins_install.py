@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import os
+import io
+import contextlib
 import argparse
 import sys
 from mfplugin.utils import inside_a_plugin_env
@@ -8,7 +10,7 @@ from mfplugin.manager import PluginsManager
 from mfplugin.file import PluginFile
 from mfplugin.utils import BadPluginFile, AlreadyInstalledPlugin, \
     validate_plugin_name, BadPluginName
-from mfutil.cli import echo_running, echo_nok, echo_ok, echo_bold
+from mfutil.cli import echo_running, echo_nok, echo_ok, echo_bold, echo_warning
 
 DESCRIPTION = "install a plugin file"
 MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'mfext')
@@ -52,15 +54,26 @@ def main():
     else:
         echo_running("- Installing plugin %s..." % name)
     try:
-        manager.install_plugin(args.plugin_filepath, new_name=args.new_name)
+        f = io.StringIO()
+        with contextlib.redirect_stderr(f):
+            manager.install_plugin(args.plugin_filepath,
+                                   new_name=args.new_name)
     except AlreadyInstalledPlugin:
         echo_nok("already installed")
         sys.exit(1)
     except Exception as e:
         echo_nok()
+        stderr = f.getvalue()
+        if stderr != '':
+            print(stderr)
         echo_bold(str(e))
         sys.exit(2)
-    echo_ok()
+    stderr = f.getvalue()
+    if stderr != '':
+        echo_warning()
+        print(stderr)
+    else:
+        echo_ok()
     p = manager.get_plugin(args.new_name if args.new_name is not None
                            else name)
     p.print_dangerous_state()
