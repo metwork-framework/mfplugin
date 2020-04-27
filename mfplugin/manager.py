@@ -255,9 +255,11 @@ class PluginsManager(object):
         tmpdir = os.path.join(MFMODULE_RUNTIME_HOME, "tmp",
                               "plugin_%s" % get_unique_hexa_identifier())
         shutil.copytree(p.home, tmpdir, symlinks=True)
+        # FIXME: ? clean ?
         newp = self.make_plugin(tmpdir, dont_read_config_overrides=True)
         newp.load_full()
-        x = ConfigUpdater()
+        x = ConfigUpdater(delimiters=('=',), comment_prefixes=('#',))
+        x.optionxform = str
         x.read("%s/config.ini" % tmpdir)
         sections = p.configuration._doc.keys()
         for section in sections:
@@ -265,17 +267,29 @@ class PluginsManager(object):
                 if option.startswith('_'):
                     continue
                 val = p.configuration._doc[section][option]
-                newval = newp.configuration._doc[section][option]
                 try:
-                    if newval == val:
-                        continue
-                    print("CHANGED [%s]/%s: %s => %s" %
-                          (section, option, newval, val),
-                          file=sys.stderr)
-                    if isinstance(val, bool):
-                        x[section][option].value = "1" if val else "0"
+                    newval = newp.configuration._doc[section][option]
+                except Exception:
+                    # probably a new section
+                    try:
+                        x.add_section(section)
+                    except Exception:
+                        pass
+                    newval = None
+                try:
+                    if newval is None:
+                        print("NEW [%s]/%s = %s" % (section, option, val),
+                              file=sys.stderr)
                     else:
-                        x[section][option].value = val
+                        if newval == val:
+                            continue
+                        print("CHANGED [%s]/%s: %s => %s" %
+                              (section, option, newval, val),
+                              file=sys.stderr)
+                    if isinstance(val, bool):
+                        x.set(section, option, "1" if val else "0")
+                    else:
+                        x.set(section, option, val)
                 except Exception:
                     pass
         x.update_file()

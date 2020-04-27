@@ -1,4 +1,5 @@
 import os
+import re
 import copy
 import sys
 import fnmatch
@@ -52,7 +53,7 @@ SCHEMA = {
             **EXTRA_DAEMON_SCHEMA
         },
     },
-    "custom": {
+    "custom*": {
         "required": False,
         "type": "dict",
         "allow_unknown": True,
@@ -109,9 +110,13 @@ class Configuration(object):
             else:
                 sections = []
         for section in sections:
+            if not re.match("^[a-zA-Z0-9-_]+$", section):
+                continue
             for option in self._doc[section].keys():
                 if ignore_keys_starting_with and \
                         option.strip().startswith(ignore_keys_starting_with):
+                    continue
+                if not re.match("^[a-zA-Z0-9-_]+$", option):
                     continue
                 val = self._doc[section][option]
                 name = "%s_CURRENT_PLUGIN_%s_%s" % \
@@ -206,6 +211,7 @@ class Configuration(object):
         v.require_all = True
         parser = OpinionatedConfigParser(delimiters=("=",),
                                          comment_prefixes=("#",))
+        parser.optionxform = str
         try:
             parser.read(paths)
         except Exception:
@@ -292,6 +298,9 @@ class Configuration(object):
     def add_app(self, app):
         self.load()
         self._apps.append(app)
+
+    def add_step(self, app):
+        self.add_app(app)
 
     def add_extra_daemon(self, extra_daemon):
         self.load()
