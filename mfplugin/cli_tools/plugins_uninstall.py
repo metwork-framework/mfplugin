@@ -3,6 +3,8 @@
 import os
 import argparse
 import sys
+import io
+import contextlib
 from mfplugin.utils import inside_a_plugin_env
 from mfplugin.manager import PluginsManager
 from mfplugin.utils import NotInstalledPlugin
@@ -29,12 +31,18 @@ def main():
     manager = PluginsManager(plugins_base_dir=args.plugins_base_dir)
     echo_running("- Uninstalling plugin %s..." % name)
     try:
-        manager.uninstall_plugin(name)
+        out = io.StringIO()
+        err = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            with contextlib.redirect_stderr(err):
+                manager.uninstall_plugin(name)
     except NotInstalledPlugin:
         echo_nok("not installed")
         sys.exit(1)
     except Exception as e:
         echo_nok()
+        print(err.getvalue(), file=sys.stderr)
+        print(out.getvalue())
         print(e)
         sys.exit(2)
     echo_ok()

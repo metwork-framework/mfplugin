@@ -173,6 +173,8 @@ class Configuration(object):
         for section in validated_document.keys():
             for option in validated_document[section].keys():
                 val = validated_document[section][option]
+                if section not in vdocument:
+                    vdocument[section] = {}
                 if option.endswith("_hostname") or option == "hostname":
                     if "%s_ip" % option not in validated_document[section]:
                         new_val = resolve(val)
@@ -190,8 +192,6 @@ class Configuration(object):
                             new_vals.append(new_val)
                         vdocument[section]["%s_ips" % option] = \
                             ";".join(new_vals)
-                if section not in vdocument:
-                    vdocument[section] = {}
                 vdocument[section][option] = val
         try:
             return self.get_final_document(vdocument)
@@ -245,11 +245,12 @@ class Configuration(object):
                     # we are trying to find the bad file
                     status, v_errors, _ = \
                         self.__validate([self._config_filepath])
-                    errors = cerberus_errors_to_human_string(v_errors)
-                    raise BadPlugin(
-                        "invalid configuration file: %s" %
-                        self._config_filepath,
-                        validation_errors=errors)
+                    if status is False:
+                        errors = cerberus_errors_to_human_string(v_errors)
+                        raise BadPlugin(
+                            "invalid configuration file: %s" %
+                            self._config_filepath,
+                            validation_errors=errors)
                     for p in self.paths:
                         if p == self._config_filepath:
                             continue

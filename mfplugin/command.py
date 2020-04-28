@@ -145,3 +145,7 @@ class Command(object):
         res = res.replace("{plugin_dir}", self.plugin_home)
         res = res.replace("{%s_name}" % self._type, self.name)
         return res
+
+    @property
+    def type(self):
+        return self._type
