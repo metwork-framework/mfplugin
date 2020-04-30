@@ -9,7 +9,7 @@ from mfplugin.utils import inside_a_plugin_env
 from mfplugin.manager import PluginsManager
 from mfplugin.file import PluginFile
 from mfplugin.utils import BadPluginFile, AlreadyInstalledPlugin, \
-    validate_plugin_name, BadPluginName
+    validate_plugin_name, BadPluginName, NotInstalledPlugin
 from mfutil.cli import echo_running, echo_nok, echo_ok, echo_bold, echo_warning
 
 DESCRIPTION = "install a plugin file"
@@ -25,6 +25,9 @@ def main():
                             "plugins-base-dir, if not set the value of "
                             "MFMODULE_PLUGINS_BASE_DIR env var is used (or a "
                             "hardcoded standard value).")
+    arg_parser.add_argument("--force", action="store_true",
+                            help="if set, automatically uninstall old plugin"
+                            "with the same name (if already installed)")
     arg_parser.add_argument("--new-name", type=str, default=None,
                             help="install the plugin but with a new name "
                             "given by this parameter")
@@ -49,6 +52,24 @@ def main():
         sys.exit(1)
     echo_ok()
     name = pf.name
+    new_name = args.new_name if args.new_name else name
+    try:
+        manager.get_plugin(new_name)
+        if args.force:
+            try:
+                echo_running("- Uninstalling (old) plugin %s..." % new_name)
+                with contextlib.redirect_stdout(open(os.devnull, "w")):
+                    with contextlib.redirect_stderr(open(os.devnull, "w")):
+                        manager.uninstall_plugin(new_name)
+                echo_ok()
+            except Exception:
+                echo_nok()
+                echo_bold("=> try uninstalling with plugins.uninstall for "
+                          "more details")
+                sys.exit(1)
+    except NotInstalledPlugin:
+        pass
+
     if args.new_name is not None:
         echo_running("- Installing plugin %s as %s..." % (name, args.new_name))
     else:
