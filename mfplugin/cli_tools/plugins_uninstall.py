@@ -11,6 +11,7 @@ from mfplugin.utils import NotInstalledPlugin
 from mfutil.cli import echo_running, echo_nok, echo_ok
 
 DESCRIPTION = "uninstall a plugin"
+MFMODULE_RUNTIME_HOME = os.environ.get('MFMODULE_RUNTIME_HOME', '/tmp')
 MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'mfext')
 
 
@@ -18,6 +19,12 @@ def main():
     arg_parser = argparse.ArgumentParser(description=DESCRIPTION)
     arg_parser.add_argument("name", type=str,
                             help="plugin name")
+    arg_parser.add_argument(
+        "--clean", action="store_true",
+        help="if set, we drop any configuration override "
+        "under ${MODULE_HOME}/config/plugins/ for this "
+        "plugin (warning: delete nothing under /etc/metwork.config.d/"
+        f"{MFMODULE_LOWERCASE}/plugins/)")
     arg_parser.add_argument("--plugins-base-dir", type=str, default=None,
                             help="can be use to set an alternate "
                             "plugins-base-dir, if not set the value of "
@@ -45,6 +52,11 @@ def main():
         print(out.getvalue())
         print(e)
         sys.exit(2)
+    finally:
+        try:
+            os.unlink(f"{MFMODULE_RUNTIME_HOME}/config/plugins/{name}.ini")
+        except Exception:
+            pass
     echo_ok()
 
 

@@ -214,9 +214,9 @@ class Configuration(object):
         parser.optionxform = str
         try:
             parser.read(paths)
-        except Exception:
+        except Exception as e:
             raise BadPlugin("can't read configuration paths: %s" %
-                            ", ".join(paths))
+                            ", ".join(paths), original_exception=e)
         if public:
             schema = self.__get_public_schema(parser)
         else:
