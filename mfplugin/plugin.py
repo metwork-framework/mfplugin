@@ -25,7 +25,7 @@ MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')
 MFMODULE = os.environ.get('MFMODULE', 'GENERIC')
 SPEC_TEMPLATE = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              "plugin.spec")
-BUID_HOST = os.environ.get('MFCOM_HOSTNAME_FULL', socket.gethostname())
+BUID_HOST = os.environ.get('MFHOSTNAME_FULL', socket.gethostname())
 
 
 class Plugin(object):
