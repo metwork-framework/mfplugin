@@ -225,7 +225,7 @@ class Configuration(object):
         if status is False:
             return (status, v.errors, None)
         else:
-            return (True, {}, v.document)
+            return (True, {}, v.normalized(v.document))
 
     def load(self):
         with PluginEnvContextManager(get_current_envs(self.plugin_name,

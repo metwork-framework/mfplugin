@@ -38,6 +38,16 @@ def _install_two_plugin(x):
 
 
 @with_empty_base
+def test_default_values():
+    x = PluginsManager(plugins_base_dir=BASE)
+    _install_two_plugin(x)
+    x.plugins["plugin1"].load_full()
+    import json
+    print(json.dumps(x.plugins["plugin1"].configuration._doc, indent=4))
+    assert x.plugins["plugin1"].configuration.add_plugin_dir_to_python_path
+
+
+@with_empty_base
 def test_install_plugin():
     x = PluginsManager(plugins_base_dir=BASE)
     _install_two_plugin(x)

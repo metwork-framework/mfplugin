@@ -290,6 +290,8 @@ def resolve(val):
 
 
 def to_bool(strng):
+    if isinstance(strng, bool):
+        return strng
     try:
         return strng.lower() in ('1', 'true', 'yes', 'y', 't')
     except Exception:
