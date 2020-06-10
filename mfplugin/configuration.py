@@ -12,7 +12,8 @@ from mfplugin.app import APP_SCHEMA, App
 from mfplugin.extra_daemon import EXTRA_DAEMON_SCHEMA, ExtraDaemon
 from mfplugin.utils import BadPlugin, resolve, get_current_envs, \
     PluginEnvContextManager, NON_REQUIRED_BOOLEAN_DEFAULT_TRUE, \
-    get_app_class, get_extra_daemon_class, get_nice_dump, is_jsonable
+    get_app_class, get_extra_daemon_class, get_nice_dump, is_jsonable, \
+    get_configuration_path, get_configuration_paths
 
 
 MFMODULE = os.environ.get("MFMODULE", "GENERIC")
@@ -74,22 +75,16 @@ class Configuration(object):
         self.extra_daemon_class = get_extra_daemon_class(extra_daemon_class,
                                                          ExtraDaemon)
         if config_filepath is None:
-            self._config_filepath = os.path.join(plugin_home, "config.ini")
+            self._config_filepath = get_configuration_path(self.plugin_home)
         else:
             self._config_filepath = config_filepath
         if not os.path.isfile(self._config_filepath):
             raise BadPlugin("configuration file: %s is missing" %
                             self._config_filepath)
         if dont_read_config_overrides:
-            paths = [self._config_filepath]
+            paths = [get_configuration_path(self.plugin_home)]
         else:
-            paths = [
-                self._config_filepath,
-                "%s/config/plugins/%s.ini" % (MFMODULE_RUNTIME_HOME,
-                                              self.plugin_name),
-                "/etc/metwork.config.d/%s/plugins/%s.ini" %
-                (MFMODULE_LOWERCASE, self.plugin_name)
-            ]
+            paths = get_configuration_paths(plugin_name, plugin_home)
         self.paths = [x for x in paths if os.path.isfile(x)]
         self._commands = None
         self._doc = None
@@ -234,6 +229,7 @@ class Configuration(object):
                 return False
             self.__loaded = True
             status, vv_errors, v_document = self.__validate(self.paths)
+            import json
             if status is False:
                 if len(self.paths) == 1:
                     errors = cerberus_errors_to_human_string(vv_errors)

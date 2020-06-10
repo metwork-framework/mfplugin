@@ -5,6 +5,7 @@ from mfplugin.manager import PluginsManager
 from mfplugin.compat import get_installed_plugins, get_plugin_info
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+MFMODULE = os.environ.get("MFMODULE", "GENERIC")
 
 
 @with_empty_base
@@ -104,6 +105,21 @@ def test_get_plugin_env_dict():
     e = x.plugins["plugin1"].get_plugin_env_dict()
     assert e["GENERIC_CURRENT_PLUGIN_NAME"] == "plugin1"
     assert e["GENERIC_CURRENT_PLUGIN_CUSTOM_FOO"] == "bar"
+
+
+@with_empty_base
+def test_cache():
+    x = PluginsManager(plugins_base_dir=BASE)
+    _install_two_plugin(x)
+    x.plugins["plugin1"].get_configuration_hash()
+    f = x.plugins["plugin1"].get_plugin_env_dict(cache=True)
+    assert os.path.isfile("%s/.configuration_cache" %
+                          x.plugins["plugin1"].home)
+    assert "%s_CURRENT_PLUGIN_CACHE" % MFMODULE not in f
+    g = x.plugins["plugin1"].get_plugin_env_dict(cache=True)
+    assert "%s_CURRENT_PLUGIN_CACHE" % MFMODULE in g
+    del g["%s_CURRENT_PLUGIN_CACHE" % MFMODULE]
+    assert len(g) == len(f)
 
 
 @with_empty_base

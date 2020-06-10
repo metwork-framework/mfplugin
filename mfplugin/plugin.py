@@ -2,13 +2,15 @@ import os
 import hashlib
 import json
 import datetime
+import pickle
+from pathlib import Path
 import inspect
 import shutil
 import socket
 from gitignore_parser import parse_gitignore
 from mflog import get_logger
 from mfutil import BashWrapper, get_unique_hexa_identifier, mkdir_p_or_die, \
-    mkdir_p, BashWrapperOrRaise
+    mkdir_p, BashWrapperOrRaise, hash_generator
 from mfplugin.configuration import Configuration
 from mfplugin.app import App
 from mfplugin.extra_daemon import ExtraDaemon
@@ -16,6 +18,7 @@ from mfplugin.utils import BadPlugin, get_default_plugins_base_dir, \
     layerapi2_label_file_to_plugin_name, validate_plugin_name, \
     CantBuildPlugin, get_current_envs, PluginEnvContextManager, \
     get_configuration_class, get_app_class, get_extra_daemon_class, \
+    get_configuration_paths, \
     is_jsonable, layerapi2_label_to_plugin_home, plugin_name_to_layerapi2_label
 
 LOGGER = get_logger("mfplugin.py")
@@ -124,8 +127,37 @@ class Plugin(object):
         self._build_date = self._metadata.get("build_date", "unknown")
         self._size = self._metadata.get("size", "unknown")
 
+    def get_configuration_hash(self):
+        args = []
+        try:
+            with open("%s/.layerapi2_dependencies" % self.home, "r") as f:
+                args.append(f.read())
+        except Exception:
+            pass
+        for path in get_configuration_paths(self.name, self.home):
+            try:
+                with open(path, "r") as f:
+                    args.append(f.read())
+            except Exception:
+                pass
+        return hash_generator(*args)
+
     def get_plugin_env_dict(self, add_current_envs=True,
-                            set_tmp_dir=True):
+                            set_tmp_dir=True,
+                            cache=False):
+        if cache:
+            if not set_tmp_dir or not add_current_envs:
+                raise Exception(
+                    "cache=True is not compatible with add_current_envs=False "
+                    "or set_tmp_dir=False")
+            try:
+                with open("%s/.configuration_cache" % self.home, "rb") as f:
+                    h, res = pickle.loads(f.read())
+                    if h == self.get_configuration_hash():
+                        res["%s_CURRENT_PLUGIN_CACHE" % MFMODULE] = "1"
+                        return res
+            except Exception:
+                pass
         lines = []
         res = {}
         try:
@@ -164,6 +196,14 @@ class Plugin(object):
             tmpdir = os.path.join(MFMODULE_RUNTIME_HOME, "tmp", self.name)
             if mkdir_p(tmpdir, nodebug=True, nowarning=True):
                 res["TMPDIR"] = tmpdir
+        if cache:
+            h = self.get_configuration_hash()
+            tmpname = "%s/.configuration_cache.%s" % \
+                (self.home, get_unique_hexa_identifier())
+            with open(tmpname, "wb") as f:
+                f.write(pickle.dumps([h, res]))
+            os.rename(tmpname, "%s/.configuration_cache" % self.home)
+            Path('%s/.configuration_cache' % self.home).touch()
         return res
 
     def plugin_env_context(self, **kwargs):
