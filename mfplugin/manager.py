@@ -5,10 +5,9 @@ import filelock
 import shutil
 import glob
 from functools import wraps
-from mflog import get_logger
 from mfutil import mkdir_p_or_die, BashWrapperOrRaise
 from mfutil import get_unique_hexa_identifier
-from configupdater import ConfigUpdater
+import configupdater
 from mfplugin.plugin import Plugin
 from mfplugin.configuration import Configuration
 from mfplugin.app import App
@@ -26,7 +25,15 @@ __pdoc__ = {
     "with_lock": False
 }
 MFMODULE_RUNTIME_HOME = os.environ.get("MFMODULE_RUNTIME_HOME", "/tmp")
-LOGGER = get_logger("mfplugin.manager")
+LOGGER = None
+
+
+def get_logger(*args, **kwargs):
+    global LOGGER
+    from mflog import get_logger as real_get_logger
+    if LOGGER is None:
+        LOGGER = real_get_logger("mfplugin.manager")
+    return LOGGER
 
 
 def with_lock(f):
@@ -258,7 +265,8 @@ class PluginsManager(object):
         # FIXME: ? clean ?
         newp = self.make_plugin(tmpdir, dont_read_config_overrides=True)
         newp.load_full()
-        x = ConfigUpdater(delimiters=('=',), comment_prefixes=('#',))
+        x = configupdater.ConfigUpdater(delimiters=('=',),
+                                        comment_prefixes=('#',))
         x.optionxform = str
         x.read("%s/config.ini" % tmpdir)
         sections = p.configuration._doc.keys()

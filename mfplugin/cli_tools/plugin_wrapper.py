@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
+import lazy_import
 import os
-import sys
 import argparse
+sys = lazy_import.lazy_module("sys")
+shlex = lazy_import.lazy_module("shlex")
 from mfplugin.compat import PluginsManager
 from mfplugin.utils import NotInstalledPlugin
-import shlex
 
 DESCRIPTION = "execute a command in a plugin environment"
 
@@ -96,7 +97,7 @@ def main():
         print("layer_load %s >/dev/null" % p.layerapi2_layer_name)
         if args.cwd:
             print("cd %s" % p.home)
-        sys.exit(0)
+        return
 
     with p.plugin_env_context(cache=cache):
         new_layerapi2_layers_path = get_new_layerapi2_layers_path(

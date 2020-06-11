@@ -8,7 +8,6 @@ import inspect
 import shutil
 import socket
 from gitignore_parser import parse_gitignore
-from mflog import get_logger
 from mfutil import BashWrapper, get_unique_hexa_identifier, mkdir_p_or_die, \
     mkdir_p, BashWrapperOrRaise, hash_generator
 from mfplugin.configuration import Configuration
@@ -21,7 +20,6 @@ from mfplugin.utils import BadPlugin, get_default_plugins_base_dir, \
     get_configuration_paths, \
     is_jsonable, layerapi2_label_to_plugin_home, plugin_name_to_layerapi2_label
 
-LOGGER = get_logger("mfplugin.py")
 MFEXT_HOME = os.environ.get("MFEXT_HOME", None)
 MFMODULE_RUNTIME_HOME = os.environ.get('MFMODULE_RUNTIME_HOME', '/tmp')
 MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'generic')

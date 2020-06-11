@@ -4,8 +4,8 @@ import copy
 import sys
 import fnmatch
 import inspect
-from opinionated_configparser import OpinionatedConfigParser
-from cerberus import Validator
+import opinionated_configparser
+import cerberus
 from mfplugin.utils import validate_configparser, \
     cerberus_errors_to_human_string
 from mfplugin.app import APP_SCHEMA, App
@@ -201,11 +201,11 @@ class Configuration(object):
             raise
 
     def __validate(self, paths, public=False):
-        v = Validator()
+        v = cerberus.Validator()
         v.allow_unknown = False
         v.require_all = True
-        parser = OpinionatedConfigParser(delimiters=("=",),
-                                         comment_prefixes=("#",))
+        parser = opinionated_configparser.OpinionatedConfigParser(
+            delimiters=("=",), comment_prefixes=("#",))
         parser.optionxform = str
         try:
             parser.read(paths)
