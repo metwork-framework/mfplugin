@@ -45,7 +45,7 @@ def main():
                         help="unload all layers before")
     parser.add_argument("--bash-cmds", action="store_true",
                         help="if set don't execute command but output bash "
-                        "cmds to be execute in a fresh empty shell"
+                        "cmds to be execute in a fresh empty shell "
                         "(--empty and COMMAND_AND_ARGS ignored)")
     parser.add_argument("--plugins-base-dir", type=str, default=None,
                         help="can be use to set an alternate "
@@ -58,7 +58,7 @@ def main():
     parser.add_argument("PLUGIN_NAME_OR_PLUGIN_HOME", type=str,
                         help="plugin name or plugin home (if starting by /)")
     parser.add_argument("COMMAND_AND_ARGS", nargs='+',
-                        help="command (and args )to execute")
+                        help="command (and args) to execute")
     args = parser.parse_args()
     cache = not args.ignore_cache
 
