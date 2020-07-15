@@ -57,9 +57,9 @@ def main():
                         help="if set, don't use env cache")
     parser.add_argument("PLUGIN_NAME_OR_PLUGIN_HOME", type=str,
                         help="plugin name or plugin home (if starting by /)")
-    parser.add_argument("COMMAND_AND_ARGS", nargs='+',
+    parser.add_argument("COMMAND_AND_ARGS",
                         help="command (and args) to execute")
-    args = parser.parse_args()
+    args, command_args = parser.parse_known_args()
     cache = not args.ignore_cache
 
     if args.plugins_base_dir is not None:
@@ -111,7 +111,8 @@ def main():
         if args.empty:
             lw_args.append("--empty")
         lw_args.append("--")
-        for cmd_arg in args.COMMAND_AND_ARGS:
+        lw_args.append(args.COMMAND_AND_ARGS)
+        for cmd_arg in command_args:
             lw_args.append(cmd_arg)
         os.execvp("layer_wrapper", lw_args)
 
