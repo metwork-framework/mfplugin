@@ -8,6 +8,7 @@
 
 
 ### Bug Fixes
+- fix some issues with double "--" as command arguments
 - fix issue with default boolean values
 
 
