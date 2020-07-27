@@ -40,6 +40,9 @@ def with_lock(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         lock_path = get_plugin_lock_path()
+        # to avoid an INFO message of the filelock library
+        # we call get_logger() here to setup the mflog configuration
+        get_logger()
         lock = filelock.FileLock(lock_path, timeout=10)
         try:
             with lock.acquire(poll_intervall=1):
