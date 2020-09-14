@@ -23,6 +23,9 @@ with open('requirements.txt') as reqs:
 
 setup(
     name='mfplugin',
+    url="https://github.com/metwork-framework/mfplugin",
+    author="Fabien MARTY",
+    author_email="fabien.marty@gmail.com",
     packages=find_packages(),
     install_requires=required,
     include_package_data=True,
