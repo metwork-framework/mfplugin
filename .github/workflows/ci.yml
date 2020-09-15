@@ -43,13 +43,13 @@ jobs:
         password: ${{ secrets.PUB_PASSWORD }}
         port: 22
         script: |
-          rm -Rf doc
-          mkdir doc
+          rm -Rf /pub/misc/mfplugin/doc
+          mkdir /pub/misc/mfplugin/doc
     - name: Publish doc 2
       uses: garygrossgarten/github-action-scp@release
       with:
         local: html/mfplugin
-        remote: doc
+        remote: /pub/misc/mfplugin/doc
         host: ${{ secrets.PUB_HOST }}
         username: ${{ secrets.PUB_USERNAME }}
         password: ${{ secrets.PUB_PASSWORD }}
@@ -64,13 +64,13 @@ jobs:
         password: ${{ secrets.PUB_PASSWORD }}
         port: 22
         script: |
-          rm -Rf coverage
-          mkdir coverage
+          rm -Rf /pub/misc/mfplugin/coverage
+          mkdir /pub/misc/mfplugin/coverage
     - name: Publish coverage 2
       uses: garygrossgarten/github-action-scp@release
       with:
         local: htmlcov
-        remote: coverage
+        remote: /pub/misc/mfplugin/coverage
         host: ${{ secrets.PUB_HOST }}
         username: ${{ secrets.PUB_USERNAME }}
         password: ${{ secrets.PUB_PASSWORD }}
