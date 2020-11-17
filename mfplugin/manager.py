@@ -50,9 +50,9 @@ def with_lock(f):
             _touch_conf_monitor_control_file()
             return res
         except filelock.Timeout:
-            LOGGER.warning("can't acquire plugin management lock "
-                           " => another plugins.install/uninstall "
-                           "running ?")
+            get_logger().warning("can't acquire plugin management lock "
+                                 " => another plugins.install/uninstall "
+                                 "running ?")
     return wrapper
 
 
@@ -320,8 +320,8 @@ class PluginsManager(object):
             try:
                 plugin = self.make_plugin(directory)
             except BadPlugin as e:
-                LOGGER.warning("found bad plugin in %s => ignoring it "
-                               "(details: %s)" % (directory, e))
+                get_logger().warning("found bad plugin in %s => ignoring it "
+                                     "(details: %s)" % (directory, e))
                 continue
             self._plugins[plugin.name] = plugin
 
