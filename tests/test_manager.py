@@ -128,8 +128,16 @@ def test_plugin_env_context():
     _install_two_plugin(x)
     assert "GENERIC_CURRENT_PLUGIN_CUSTOM_FOO" not in os.environ
     assert "GENERIC_CURRENT_PLUGIN_NAME" not in os.environ
+    old = os.environ.get("MFCONFIG", None)
+    os.environ["MFCONFIG"] = "SPECIFIC"
     with x.plugin_env_context("plugin1"):
+        assert os.environ["MFCONFIG"] == "SPECIFIC"
         assert os.environ["GENERIC_CURRENT_PLUGIN_CUSTOM_FOO"] == "bar"
+        assert os.environ["GENERIC_CURRENT_PLUGIN_CUSTOM_FOO2"] == "bar2"
         assert os.environ["GENERIC_CURRENT_PLUGIN_NAME"] == "plugin1"
+    if old is None:
+        del(os.environ["MFCONFIG"])
+    else:
+        os.environ["MFCONFIG"] = old
     assert "GENERIC_CURRENT_PLUGIN_CUSTOM_FOO" not in os.environ
     assert "GENERIC_CURRENT_PLUGIN_NAME" not in os.environ
