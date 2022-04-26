@@ -11,12 +11,17 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ '3.6', '3.7', '3.8', '3.9', '3.10' ]
+
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.7
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
-        python-version: 3.7
+        python-version: ${{ matrix.python-version }} 
     - name: Install dev dependencies
       run: |
         python -m pip install --upgrade pip
@@ -36,6 +41,7 @@ jobs:
       run: |
         make doc
     - name: Publish doc 1
+      if: matrix.python-version == '3.7'
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.PUB_HOST }}
@@ -46,6 +52,7 @@ jobs:
           rm -Rf /pub/misc/mfplugin/doc
           mkdir /pub/misc/mfplugin/doc
     - name: Publish doc 2
+      if: matrix.python-version == '3.7'
       uses: garygrossgarten/github-action-scp@release
       with:
         local: html/mfplugin
@@ -57,6 +64,7 @@ jobs:
       run: |
         make coverage
     - name: Publish coverage 1
+      if: matrix.python-version == '3.7'
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.PUB_HOST }}
@@ -67,6 +75,7 @@ jobs:
           rm -Rf /pub/misc/mfplugin/coverage
           mkdir /pub/misc/mfplugin/coverage
     - name: Publish coverage 2
+      if: matrix.python-version == '3.7'
       uses: garygrossgarten/github-action-scp@release
       with:
         local: htmlcov
