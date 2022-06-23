@@ -5,6 +5,7 @@ import argparse
 import sys
 import io
 import contextlib
+import pathlib
 from mfplugin.utils import inside_a_plugin_env
 from mfplugin.manager import PluginsManager
 from mfplugin.utils import NotInstalledPlugin
@@ -17,8 +18,8 @@ MFMODULE_LOWERCASE = os.environ.get('MFMODULE_LOWERCASE', 'mfext')
 
 def main():
     arg_parser = argparse.ArgumentParser(description=DESCRIPTION)
-    arg_parser.add_argument("name", type=str,
-                            help="plugin name")
+    arg_parser.add_argument("name_or_path", type=str,
+                            help="plugin name (or path)")
     arg_parser.add_argument(
         "--clean", action="store_true",
         help="if set, we drop any configuration override "
@@ -31,7 +32,7 @@ def main():
                             "MFMODULE_PLUGINS_BASE_DIR env var is used (or a "
                             "hardcoded standard value).")
     args = arg_parser.parse_args()
-    name = args.name
+    name = pathlib.PurePath(args.name_or_path).name
     if inside_a_plugin_env():
         print("ERROR: Don't use plugins.install/uninstall inside a plugin_env")
         sys.exit(1)
