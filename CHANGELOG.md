@@ -5,6 +5,7 @@
 ### New Features
 
 - add a cache feature in plugin_wrapper
+- uninstall plugin with path (fix #17)
 
 ### Bug Fixes
 
