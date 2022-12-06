@@ -88,13 +88,20 @@ def main():
         print("source %s/share/interactive_profile" % MFMODULE_HOME)
         plugin_env = p.get_plugin_env_dict(cache=cache)
         for k, v in plugin_env.items():
-            print("export %s=%s" % (k, shlex.quote(v)))
+            if k != 'PYTHONPATH':
+                print("export %s=%s" % (k, shlex.quote(v)))
         new_layerapi2_layers_path = get_new_layerapi2_layers_path(
             p.home, add_plugin_home=(mode == "file"))
         if new_layerapi2_layers_path != LAYERAPI2_LAYERS_PATH:
             print("export LAYERAPI2_LAYERS_PATH=%s" %
                   new_layerapi2_layers_path)
         print("layer_load %s >/dev/null" % p.layerapi2_layer_name)
+        if p.configuration.add_plugin_dir_to_python_path:
+            old_python_path = os.environ.get("PYTHONPATH", None)
+            if old_python_path:
+                print("export PYTHONPATH=\"%s:${PYTHONPATH}\"" % p.home)
+            else:
+                print("export PYTHONPATH=\"%s\"" % p.home)
         if args.cwd:
             print("cd %s" % p.home)
         return

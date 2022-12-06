@@ -143,6 +143,22 @@ class Plugin(object):
     def get_plugin_env_dict(self, add_current_envs=True,
                             set_tmp_dir=True,
                             cache=False):
+        res = self._get_plugin_env_dict(add_current_envs=add_current_envs,
+                                        set_tmp_dir=set_tmp_dir,
+                                        cache=cache)
+        # this bloc is here and not inside _get_plugin_env_dict because
+        # PYTHONPATH shouldn't be cached (because it depends on loaded layers)
+        if self.configuration.add_plugin_dir_to_python_path:
+            old_python_path = os.environ.get("PYTHONPATH", None)
+            if old_python_path:
+                res["PYTHONPATH"] = self.home + ":" + old_python_path
+            else:
+                res["PYTHONPATH"] = self.home
+        return res
+
+    def _get_plugin_env_dict(self, add_current_envs=True,
+                             set_tmp_dir=True,
+                             cache=False):
         if cache:
             if not set_tmp_dir or not add_current_envs:
                 raise Exception(
@@ -184,12 +200,6 @@ class Plugin(object):
         res.update(env_var_dict)
         if add_current_envs:
             res.update(get_current_envs(self.name, self.home))
-        if self.configuration.add_plugin_dir_to_python_path:
-            old_python_path = os.environ.get("PYTHONPATH", None)
-            if old_python_path:
-                res["PYTHONPATH"] = self.home + ":" + old_python_path
-            else:
-                res["PYTHONPATH"] = self.home
         if set_tmp_dir:
             tmpdir = os.path.join(MFMODULE_RUNTIME_HOME, "tmp", self.name)
             if mkdir_p(tmpdir, nodebug=True, nowarning=True):
