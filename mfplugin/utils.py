@@ -385,7 +385,6 @@ def get_configuration_paths(plugin_name, plugin_home):
         "%s/config/plugins/%s.ini" % (MFMODULE_RUNTIME_HOME, plugin_name),
         "/etc/metwork.config.d/%s/plugins/%s.ini" %
         (MFMODULE_LOWERCASE, plugin_name),
-        "/etc/metwork.config"
     ]
 
 
