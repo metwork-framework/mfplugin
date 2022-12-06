@@ -53,11 +53,6 @@ def main():
         print(out.getvalue())
         print(e)
         sys.exit(2)
-    finally:
-        try:
-            os.unlink(f"{MFMODULE_RUNTIME_HOME}/config/plugins/{name}.ini")
-        except Exception:
-            pass
     echo_ok()
 
 
