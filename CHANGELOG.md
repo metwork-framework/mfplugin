@@ -12,5 +12,8 @@
 - fix issue with default boolean values
 - fix some issues with double "--" as command arguments
 - fix logger issues in some cases
+- plugin config is removed even if something has been changed into it (#15)
+- fix an issue reported in metwork-framework/mfext#956
+- fix a big part of metwork-framework/mfext#956
 
 
