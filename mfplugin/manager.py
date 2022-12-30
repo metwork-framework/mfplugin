@@ -45,7 +45,7 @@ def with_lock(f):
         get_logger()
         lock = filelock.FileLock(lock_path, timeout=10)
         try:
-            with lock.acquire(poll_intervall=1):
+            with lock.acquire(poll_interval=1):
                 res = f(*args, **kwargs)
             _touch_conf_monitor_control_file()
             return res
