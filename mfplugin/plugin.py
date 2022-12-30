@@ -221,7 +221,10 @@ class Plugin(object):
         if not self._is_installed:
             # the plugin is not installed, let's read version in configuration
             self._version = self.configuration.version
-            self._release = "1"
+            if self.configuration.release:
+                self._release = self.configuration.release
+            else:
+                self._release = "1"
             return
         # the plugin is installed
         if self.is_dev_linked:

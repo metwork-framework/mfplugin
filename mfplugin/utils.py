@@ -420,3 +420,7 @@ NON_REQUIRED_STRING_DEFAULT_EMPTY = {
     **NON_REQUIRED_STRING,
     "default": ""
 }
+NON_REQUIRED_STRING_DEFAULT_1 = {
+    **NON_REQUIRED_STRING,
+    "default": "1"
+}

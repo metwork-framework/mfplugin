@@ -12,6 +12,7 @@ from mfplugin.app import APP_SCHEMA, App
 from mfplugin.extra_daemon import EXTRA_DAEMON_SCHEMA, ExtraDaemon
 from mfplugin.utils import BadPlugin, resolve, get_current_envs, \
     PluginEnvContextManager, NON_REQUIRED_BOOLEAN_DEFAULT_TRUE, \
+    NON_REQUIRED_STRING_DEFAULT_1, \
     get_app_class, get_extra_daemon_class, get_nice_dump, is_jsonable, \
     get_configuration_path, get_configuration_paths
 
@@ -27,6 +28,9 @@ SCHEMA = {
         "schema": {
             "_version": {"required": True, "type": "string",
                          "regex": r"^[a-z0-9-_\.]+$"},
+            "_release": {
+                **NON_REQUIRED_STRING_DEFAULT_1
+            },
             "_summary": {"required": True, "type": "string", "minlength": 1},
             "_license": {"required": True, "type": "string", "minlength": 1},
             "_url": {"required": True, "type": "string", "minlength": 1},
@@ -325,6 +329,11 @@ class Configuration(object):
     def version(self):
         self.load()
         return self._doc['general']['_version']
+
+    @property
+    def release(self):
+        self.load()
+        return self._doc['general']['_release']
 
     @property
     def summary(self):
