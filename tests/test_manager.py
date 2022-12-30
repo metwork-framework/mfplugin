@@ -33,7 +33,7 @@ def _install_two_plugin(x):
     assert not x.plugins["plugin1"].is_dev_linked
     assert x.plugins["plugin2"].name == "plugin2"
     assert x.plugins["plugin2"].version == "4.5.6"
-    assert x.plugins["plugin2"].release == "1"
+    assert x.plugins["plugin2"].release == "2"
     assert x.plugins["plugin2"].is_installed
     assert not x.plugins["plugin2"].is_dev_linked
 
