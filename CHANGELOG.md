@@ -6,6 +6,7 @@
 
 - add a cache feature in plugin_wrapper
 - uninstall plugin with path (fix #17)
+- add release in mfplugin configuration
 
 ### Bug Fixes
 
