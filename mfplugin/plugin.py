@@ -295,15 +295,7 @@ class Plugin(object):
                                 original_exception=e)
         root = os.path.join(tmpdir, "metwork_plugin")
         if matches is not None:
-            for r, d, f in os.walk(root):
-                for flder in d:
-                    full_path = os.path.join(r, flder)
-                    path = self.home + full_path[len(root):]
-                    if matches(path):
-                        shutil.rmtree(full_path, ignore_errors=True)
-                        # we remove the directory from walking
-                        # https://stackoverflow.com/a/19859907/433050
-                        d.remove(flder)
+            for r, d, f in os.walk(root,topdown=False):
                 for fle in f:
                     full_path = os.path.join(r, fle)
                     path = self.home + full_path[len(root):]
@@ -312,6 +304,11 @@ class Plugin(object):
                             os.unlink(full_path)
                         except Exception:
                             pass
+                for flder in d:
+                    full_path = os.path.join(r, flder)
+                    path = self.home + full_path[len(root):]
+                    if matches(path) and not os.listdir(full_path) :
+                        shutil.rmtree(full_path, ignore_errors=True)
         files = []
         total_size = 0
         for r, d, f in os.walk(os.path.join(tmpdir, "metwork_plugin")):
