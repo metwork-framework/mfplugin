@@ -169,6 +169,9 @@ class Plugin(object):
                     h, res = pickle.loads(f.read())
                     if h == self.get_configuration_hash():
                         res["%s_CURRENT_PLUGIN_CACHE" % MFMODULE] = "1"
+                        tmpdir = res["TMPDIR"]
+                        if tmpdir != "" and not os.path.exists(tmpdir):
+                            mkdir_p(tmpdir, nodebug=True, nowarning=True)
                         return res
             except Exception:
                 pass
