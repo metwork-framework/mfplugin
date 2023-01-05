@@ -16,5 +16,6 @@
 - plugin config is removed even if something has been changed into it (#15)
 - fix an issue reported in metwork-framework/mfext#956
 - fix a big part of metwork-framework/mfext#956
+- #1178 patterns with negation, change the way to apply results of .releaseignore file (#14)
 
 
