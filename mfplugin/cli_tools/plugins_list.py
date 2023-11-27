@@ -5,7 +5,7 @@ import argparse
 import sys
 import json
 from mfplugin.manager import PluginsManager
-from terminaltables import SingleTable
+from terminaltables import DoubleTable
 from mflog import get_logger
 
 DESCRIPTION = "get the installed plugins list"
@@ -54,7 +54,7 @@ def main():
         else:
             table_data.append([plugin.name, version, release, plugin.home])
     if not args.raw and not args.json:
-        t = SingleTable(title="Installed plugins (%i)" % len(plugins),
+        t = DoubleTable(title="Installed plugins (%i)" % len(plugins),
                         table_data=table_data)
         print(t.table)
     elif args.json:

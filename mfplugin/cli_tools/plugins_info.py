@@ -5,7 +5,7 @@ import os
 import argparse
 import sys
 import textwrap
-from terminaltables import SingleTable
+from terminaltables import DoubleTable
 from mfplugin.compat import get_plugin_info
 
 DESCRIPTION = "get some information about a plugin"
@@ -44,7 +44,7 @@ def main():
                        ("License", "license"), ("Maintainer", "packager"),
                        ("Vendor", "vendor"), ("URL", "url")]:
         table_data.append((title, textwrap.fill(infos['metadatas'][key], 60)))
-    t = SingleTable(table_data=table_data)
+    t = DoubleTable(table_data=table_data)
     t.inner_heading_row_border = False
     print(t.table)
     print()
