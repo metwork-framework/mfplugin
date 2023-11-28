@@ -7,6 +7,7 @@
 - add a cache feature in plugin_wrapper
 - uninstall plugin with path (fix #17)
 - add release in mfplugin configuration
+- Replace SingleTable from terminaltables by a DoubleTable (closes #13) (#22)
 
 ### Bug Fixes
 
