@@ -92,13 +92,15 @@ def main():
     stderr = f.getvalue()
     if stderr != '':
         echo_warning()
-        print(stderr.replace("ERROR", "WARNING"))
         if "pip's dependency resolver does not currently take into account" in stderr:
+            print(stderr.replace("ERROR", "WARNING"))
             print("The above message is only a WARNING, don't panic !")
             print("Your plugin should work anyway")
             print("To get rid of it, maybe you should remove from your plugin the optional layers")
             print("    (those starting by '-' in .layerapi2_dependencies)")
             print("or ask for help from a Metwork specialist")
+        else:
+            print(stderr)
     else:
         echo_ok()
     p = manager.get_plugin(args.new_name if args.new_name is not None
