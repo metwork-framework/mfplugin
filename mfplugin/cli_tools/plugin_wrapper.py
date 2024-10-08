@@ -3,10 +3,11 @@
 import lazy_import
 import os
 import argparse
-sys = lazy_import.lazy_module("sys")
-shlex = lazy_import.lazy_module("shlex")
 from mfplugin.compat import PluginsManager
 from mfplugin.utils import NotInstalledPlugin
+
+sys = lazy_import.lazy_module("sys")
+shlex = lazy_import.lazy_module("shlex")
 
 DESCRIPTION = "execute a command in a plugin environment"
 

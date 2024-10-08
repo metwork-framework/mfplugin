@@ -34,7 +34,7 @@ def main():
         echo_bold(str(e))
         if args.debug:
             print("details of the problem:")
-            raise(e)
+            raise e
         else:
             print("(note: use 'plugins.check --debug /plugin/path' "
                   "for more details)")

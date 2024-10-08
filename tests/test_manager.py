@@ -136,7 +136,7 @@ def test_plugin_env_context():
         assert os.environ["GENERIC_CURRENT_PLUGIN_CUSTOM_FOO2"] == "bar2"
         assert os.environ["GENERIC_CURRENT_PLUGIN_NAME"] == "plugin1"
     if old is None:
-        del(os.environ["MFCONFIG"])
+        del os.environ["MFCONFIG"]
     else:
         os.environ["MFCONFIG"] = old
     assert "GENERIC_CURRENT_PLUGIN_CUSTOM_FOO" not in os.environ

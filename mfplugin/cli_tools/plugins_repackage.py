@@ -49,7 +49,7 @@ def main():
         print(e)
         if args.debug:
             print("details of the problem:")
-            raise(e)
+            raise e
         else:
             print("note: use --debug option for more details")
     else:

@@ -132,7 +132,8 @@ class Plugin(object):
                 args.append(f.read())
         except Exception:
             pass
-        for path in get_configuration_paths(self.name, self.home) + ["/etc/metwork.config"]:
+        for path in get_configuration_paths(self.name, self.home) \
+                    + ["/etc/metwork.config"]:
             try:
                 with open(path, "r") as f:
                     args.append(f.read())
@@ -298,7 +299,7 @@ class Plugin(object):
                                 original_exception=e)
         root = os.path.join(tmpdir, "metwork_plugin")
         if matches is not None:
-            for r, d, f in os.walk(root,topdown=False):
+            for r, d, f in os.walk(root, topdown=False):
                 for fle in f:
                     full_path = os.path.join(r, fle)
                     path = self.home + full_path[len(root):]
@@ -310,7 +311,7 @@ class Plugin(object):
                 for flder in d:
                     full_path = os.path.join(r, flder)
                     path = self.home + full_path[len(root):]
-                    if matches(path) and not os.listdir(full_path) :
+                    if matches(path) and not os.listdir(full_path):
                         shutil.rmtree(full_path, ignore_errors=True)
         files = []
         total_size = 0

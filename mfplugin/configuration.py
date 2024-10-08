@@ -233,7 +233,6 @@ class Configuration(object):
                 return False
             self.__loaded = True
             status, vv_errors, v_document = self.__validate(self.paths)
-            import json
             if status is False:
                 if len(self.paths) == 1:
                     errors = cerberus_errors_to_human_string(vv_errors)
