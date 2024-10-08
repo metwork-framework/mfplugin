@@ -327,7 +327,10 @@ class Plugin(object):
             "version": self.version,
             "release": self.release,
             "build_host": BUID_HOST,
-            "build_date": datetime.datetime.now(datetime.UTC).isoformat()[0:19] + 'Z',
+            #utcnow() is deprecated  and should be replaced by now(datetime.UTC)
+            #   (for python >= 3.11)
+            #"build_date": datetime.datetime.now(datetime.UTC).isoformat()[0:19] + 'Z',
+            "build_date": datetime.datetime.utcnow().isoformat()[0:19] + 'Z',
             "size": str(total_size),
             "summary": self.configuration.summary,
             "license": self.configuration.license,
