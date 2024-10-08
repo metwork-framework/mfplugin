@@ -186,10 +186,7 @@ class PluginsManager(object):
             name = x.name
         try:
             tf = tarfile.open(plugin_filepath, "r")
-            if hasattr(tarfile, "fully_trusted_filter"):
-                tf.extractall(self.plugins_base_dir, "fully_trusted")
-            else:
-                tf.extractall(self.plugins_base_dir)
+            tf.extractall(self.plugins_base_dir, "fully_trusted")
             os.rename(os.path.join(self.plugins_base_dir, "metwork_plugin"),
                       os.path.join(self.plugins_base_dir, name))
         except Exception as e:
