@@ -132,8 +132,8 @@ class Plugin(object):
                 args.append(f.read())
         except Exception:
             pass
-        for path in get_configuration_paths(self.name, self.home) \
-                    + ["/etc/metwork.config"]:
+        for path in get_configuration_paths(
+                self.name, self.home) + ["/etc/metwork.config"]:
             try:
                 with open(path, "r") as f:
                     args.append(f.read())

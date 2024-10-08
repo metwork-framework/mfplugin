@@ -97,10 +97,10 @@ def main():
             print(stderr.replace("ERROR", "WARNING"))
             print("The above message is only a WARNING, don't panic !")
             print("Your plugin should work anyway")
-            print("To get rid of it, maybe you should remove from your plugin ")
-            print("    the optional layers (those starting by '-' in ")
-            print("    .layerapi2_dependencies or ask for help from a Metwork")
-            print("    specialist")
+            print("To get rid of it, maybe you should remove from your")
+            print("    plugin the optional layers (those starting by")
+            print("    '-' in .layerapi2_dependencies or ask for help from")
+            print("    a Metwork specialist")
         else:
             print(stderr)
     else:
