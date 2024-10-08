@@ -323,14 +323,19 @@ class Plugin(object):
                     total_size = total_size + os.path.getsize(path)
         with open("%s/metwork_plugin/.files.json" % tmpdir, "w") as f:
             f.write(json.dumps(files, indent=4))
+
+        #utcnow() is deprecated  and should be replaced by now(datetime.UTC)
+        #   (for python >= 3.11)
+        try:
+            build_date = datetime.datetime.now(datetime.UTC).isoformat()[0:19] + 'Z'
+        except Exception:
+            build_date = datetime.datetime.utcnow().isoformat()[0:19] + 'Z'
+
         metadata = {
             "version": self.version,
             "release": self.release,
             "build_host": BUID_HOST,
-            #utcnow() is deprecated  and should be replaced by now(datetime.UTC)
-            #   (for python >= 3.11)
-            #"build_date": datetime.datetime.now(datetime.UTC).isoformat()[0:19] + 'Z',
-            "build_date": datetime.datetime.utcnow().isoformat()[0:19] + 'Z',
+            "build_date": build_date,
             "size": str(total_size),
             "summary": self.configuration.summary,
             "license": self.configuration.license,
