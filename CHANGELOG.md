@@ -20,5 +20,6 @@
 - #1178 patterns with negation, change the way to apply results of .releaseignore file (#14)
 - create TMPDIR if it has been removed and cache file is present
 - add a reassuring message in some cases when installing a plugin
+- replace deprecated datetime.datetime.utcnow()
 
 
