@@ -1,7 +1,7 @@
 import os
 import hashlib
 import json
-import datetime
+from datetime import datetime, timezone
 import pickle
 from pathlib import Path
 import inspect
@@ -327,9 +327,10 @@ class Plugin(object):
         #utcnow() is deprecated  and should be replaced by now(datetime.UTC)
         #   (for python >= 3.11)
         try:
-            build_date = datetime.datetime.now(datetime.UTC).isoformat()[0:19] + 'Z'
+            build_date = datetime.now(timezone.utc).replace(
+                             tzinfo=None).isoformat()[0:19] + 'Z'
         except Exception:
-            build_date = datetime.datetime.utcnow().isoformat()[0:19] + 'Z'
+            build_date = datetime.utcnow().isoformat()[0:19] + 'Z'
 
         metadata = {
             "version": self.version,
