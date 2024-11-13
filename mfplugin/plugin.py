@@ -324,7 +324,7 @@ class Plugin(object):
         with open("%s/metwork_plugin/.files.json" % tmpdir, "w") as f:
             f.write(json.dumps(files, indent=4))
 
-        #utcnow() is deprecated  and should be replaced by now(datetime.UTC)
+        # utcnow() is deprecated  and should be replaced by now(datetime.UTC)
         #   (for python >= 3.11)
         try:
             build_date = datetime.now(timezone.utc).replace(

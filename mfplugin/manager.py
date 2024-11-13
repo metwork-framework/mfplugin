@@ -186,10 +186,11 @@ class PluginsManager(object):
             name = x.name
         try:
             tf = tarfile.open(plugin_filepath, "r")
-            #extractall without filter is deprecated for Python >= 3.12
-            #Filter doesn't exist for Python <= 3.8 (it works as "fully_trusted")
-            #Default filter in Python 3.14 will be "data"
-            #See https://peps.python.org/pep-0706/
+            # extractall without filter is deprecated for Python >= 3.12
+            # Filter doesn't exist for Python <= 3.8 (it works as
+            #   "fully_trusted")
+            # Default filter in Python 3.14 will be "data"
+            # See https://peps.python.org/pep-0706/
             try:
                 tf.extractall(self.plugins_base_dir, filter="fully_trusted")
             except Exception:
