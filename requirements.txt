@@ -2,7 +2,7 @@ opinionated-configparser
 cerberus
 gitignore-parser
 filelock
-terminaltables
+terminaltables3
 ConfigUpdater
 lazy-import
 git+https://github.com/metwork-framework/mfutil.git#egg=mfutil

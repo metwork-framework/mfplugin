@@ -5,7 +5,7 @@ import os
 import argparse
 import sys
 import textwrap
-from terminaltables import DoubleTable
+from terminaltables3 import DoubleTable
 from mfplugin.compat import get_plugin_info
 
 DESCRIPTION = "get some information about a plugin"

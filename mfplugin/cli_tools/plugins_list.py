@@ -5,7 +5,7 @@ import argparse
 import sys
 import json
 from mfplugin.manager import PluginsManager
-from terminaltables import DoubleTable
+from terminaltables3 import DoubleTable
 from mflog import get_logger
 
 DESCRIPTION = "get the installed plugins list"
