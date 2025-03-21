@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ '3.8', '3.9', '3.10', '3.11', '3.12', '3.13' ]
+        python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
 
     steps:
     - uses: actions/checkout@v4
@@ -41,7 +41,7 @@ jobs:
       run: |
         make doc
     - name: Publish doc
-      if: matrix.python-version == '3.8'
+      if: matrix.python-version == '3.10'
       uses: thebaptiste/ssh-scp-ssh-pipelines@metwork
       env:
         LOCAL: html/mfplugin
