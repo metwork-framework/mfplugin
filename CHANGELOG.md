@@ -8,6 +8,7 @@
 - uninstall plugin with path (fix #17)
 - add release in mfplugin configuration
 - Replace SingleTable from terminaltables by a DoubleTable (closes #13) (#22)
+- replace terminaltables (archived) by terminaltables3
 
 ### Bug Fixes
 
